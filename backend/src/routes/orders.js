@@ -2,54 +2,57 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db/setup');
 
-function makeRef() {
-  return 'AZ-' + Date.now().toString(36).toUpperCase();
-}
+const makeRef = () => 'AZ-' + Date.now().toString(36).toUpperCase();
 
 // POST /api/orders
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   const { cart, delivery, boutique, contact, payment, total } = req.body;
 
   if (!cart?.length || !contact?.name || !contact?.phone || !payment) {
     return res.status(400).json({ error: 'Données manquantes' });
   }
 
-  const ref = makeRef();
-  db.prepare(`
-    INSERT INTO orders (ref, cart, delivery, boutique, contact, payment, total)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(ref, JSON.stringify(cart), delivery, boutique || null, JSON.stringify(contact), payment, total);
+  await db.read();
 
-  const order = db.prepare('SELECT * FROM orders WHERE ref = ?').get(ref);
-  res.status(201).json({
-    ...order,
-    ref,
-    cart: JSON.parse(order.cart),
-    contact: JSON.parse(order.contact),
-  });
+  const order = {
+    id: Date.now(),
+    ref: makeRef(),
+    cart,
+    delivery,
+    boutique: boutique || null,
+    contact,
+    payment,
+    total,
+    status: 'confirmé',
+    created_at: new Date().toISOString(),
+  };
+
+  db.data.orders.unshift(order);
+  await db.write();
+
+  res.status(201).json(order);
 });
 
 // GET /api/orders
-router.get('/', (req, res) => {
-  const rows = db.prepare('SELECT * FROM orders ORDER BY created_at DESC').all();
-  res.json(rows.map(r => ({
-    ...r,
-    cart: JSON.parse(r.cart),
-    contact: JSON.parse(r.contact),
-  })));
+router.get('/', async (req, res) => {
+  await db.read();
+  res.json(db.data.orders);
 });
 
 // PATCH /api/orders/:ref/status
-router.patch('/:ref/status', (req, res) => {
+router.patch('/:ref/status', async (req, res) => {
   const { status } = req.body;
   const valid = ['confirmé', 'en préparation', 'livré', 'annulé'];
   if (!valid.includes(status)) return res.status(400).json({ error: 'Statut invalide' });
 
-  db.prepare('UPDATE orders SET status = ? WHERE ref = ?').run(status, req.params.ref);
-  const updated = db.prepare('SELECT * FROM orders WHERE ref = ?').get(req.params.ref);
-  if (!updated) return res.status(404).json({ error: 'Commande introuvable' });
+  await db.read();
+  const order = db.data.orders.find(o => o.ref === req.params.ref);
+  if (!order) return res.status(404).json({ error: 'Commande introuvable' });
 
-  res.json({ ...updated, cart: JSON.parse(updated.cart), contact: JSON.parse(updated.contact) });
+  order.status = status;
+  await db.write();
+
+  res.json(order);
 });
 
 module.exports = router;

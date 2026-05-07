@@ -127,7 +127,8 @@ router.post('/sync/woocommerce', async (req, res) => {
     let added = 0, updated = 0;
 
     for (const wp of wcProducts) {
-      const img = wp.images?.[0]?.src || '';
+      const rawImg = wp.images?.[0]?.src || '';
+      const img = rawImg ? `https://wsrv.nl/?url=${encodeURIComponent(rawImg)}&w=600&output=webp` : '';
       const price = Math.round(parseFloat(wp.price || wp.regular_price || '0'));
       const cat = wp.categories?.[0]?.name?.toLowerCase().includes('soleil') ? 'soleil'
                 : wp.categories?.[0]?.name?.toLowerCase().includes('vue')    ? 'vue'

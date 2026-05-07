@@ -510,6 +510,182 @@ else if(step==='payment') setStep('contact');
 );
 }
 
+// ─── DIASPORA SCREEN ───────────────────────────────────────────────
+function DiasporaScreen({ ccy, lang }) {
+const [mode, setMode] = useState(null);
+const [step, setStep] = useState(1);
+const [form, setForm] = useState({ from:'',recipient:'',city:'',whatsapp:'',message:'',returnDate:'',boutique:'marsa' });
+const inStyle = { background:C.bgSoft, border:`1px solid ${C.line}`, color:C.ink };
+const iCls = "w-full px-4 py-3.5 text-[13px] outline-none";
+
+if (mode === 'gift') return (
+<div className="pb-32" style={{ background:C.bg }}>
+<BackRow onBack={()=>{setMode(null);setStep(1);}} label={`SERVICE CADEAU · ÉTAPE ${step}/3`}/>
+<div className="px-5 pt-2">
+<div className="flex gap-1.5 mb-7">{[1,2,3].map(s=><div key={s} className="flex-1 h-0.5" style={{ background:s<=step?C.gold:C.line }}/>)}</div>
+{step===1 && (<div><h2 className="text-[30px] leading-tight mb-5" style={{ fontFamily:'Fraunces,serif', fontWeight:300, color:C.ink }}>Vous offrez à qui ?</h2><div className="space-y-3 mb-6"><input value={form.from} onChange={e=>setForm({...form,from:e.target.value})} placeholder="Votre prénom · Votre ville (Paris, Montréal…)" className={iCls} style={inStyle}/><input value={form.recipient} onChange={e=>setForm({...form,recipient:e.target.value})} placeholder="Prénom du destinataire en Tunisie" className={iCls} style={inStyle}/><input value={form.city} onChange={e=>setForm({...form,city:e.target.value})} placeholder="Ville de livraison (Tunis, Sousse…)" className={iCls} style={inStyle}/><input value={form.whatsapp} onChange={e=>setForm({...form,whatsapp:e.target.value})} placeholder="WhatsApp du destinataire (+216…)" className={iCls} style={inStyle}/></div><Btn variant="black" className="w-full" onClick={()=>setStep(2)} disabled={!form.from||!form.recipient||!form.city}>CONTINUER <ChevronRight size={14}/></Btn></div>)}
+{step===2 && (<div><h2 className="text-[30px] leading-tight mb-5" style={{ fontFamily:'Fraunces,serif', fontWeight:300, color:C.ink }}>Un mot pour accompagner ?</h2><textarea value={form.message} onChange={e=>setForm({...form,message:e.target.value})} rows={5} placeholder="Votre message — imprimé sur une carte et glissé dans l'écrin." className={`${iCls} resize-none mb-4`} style={inStyle}/><div className="p-4 mb-6 relative" style={{ background:C.bgWarm }}><GoldBar/><div className="flex gap-3 pl-3"><Sparkles size={14} style={{ color:C.gold, marginTop:2 }}/><div className="text-[12px] leading-relaxed" style={{ color:C.inkSoft }}><strong style={{ color:C.ink }}>Inclus :</strong> écrin Azzabi Optic + carte imprimée à votre nom + livraison 48–72h ou retrait gratuit.</div></div></div><Btn variant="black" className="w-full" onClick={()=>setStep(3)}>CHOISIR LA MONTURE <ChevronRight size={14}/></Btn></div>)}
+{step===3 && (<div><h2 className="text-[30px] leading-tight mb-3" style={{ fontFamily:'Fraunces,serif', fontWeight:300, color:C.ink }}>Notre conseillère vous rappelle.</h2><p className="text-[13px] leading-relaxed mb-5" style={{ color:C.inkSoft }}>Un opticien diplômé vous appelle sur WhatsApp dans l'heure pour le choix de la monture. Paiement par carte EUR/CAD/USD ou Wise.</p><div className="p-5 mb-5" style={{ background:C.bgSoft, border:`1px solid ${C.line}` }}><div className="text-[10px] tracking-[0.25em] font-semibold mb-3" style={{ color:C.mute }}>RÉCAPITULATIF</div>{[['De',form.from||'—'],['Pour',form.recipient||'—'],['Livraison',form.city||'—'],['Devise',ccy]].map(([k,v])=>(<div key={k} className="flex justify-between text-[12px] py-2" style={{ borderBottom:`1px solid ${C.line}` }}><span style={{ color:C.mute }}>{k}</span><span style={{ color:C.ink }}>{v}</span></div>))}</div><a href="https://wa.me/21628630250" target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 w-full py-4 text-[11px] tracking-[0.22em] font-semibold" style={{ background:C.ink, color:'#FFF' }}><MessageCircle size={15}/>CONTACTER PAR WHATSAPP</a></div>)}
+</div>
+</div>
+);
+
+if (mode === 'return') return (
+<div className="pb-32" style={{ background:C.bg }}>
+<BackRow onBack={()=>setMode(null)} label="RETOUR AU PAYS"/>
+<div className="px-5 pt-2">
+<h2 className="text-[32px] leading-tight mb-3" style={{ fontFamily:'Fraunces,serif', fontWeight:300, color:C.ink }}>Vos lunettes vous attendent à votre arrivée.</h2>
+<p className="text-[13px] leading-relaxed mb-5" style={{ color:C.inkSoft }}>Réservez votre examen de vue 4–6 semaines avant. Vos verres sont prêts le jour J.</p>
+<div className="space-y-3 mb-5">
+<input value={form.from} onChange={e=>setForm({...form,from:e.target.value})} placeholder="Votre nom complet" className={iCls} style={inStyle}/>
+<input value={form.whatsapp} onChange={e=>setForm({...form,whatsapp:e.target.value})} placeholder="WhatsApp / Téléphone" className={iCls} style={inStyle}/>
+<input type="date" value={form.returnDate} onChange={e=>setForm({...form,returnDate:e.target.value})} className={iCls} style={inStyle}/>
+<div className="grid grid-cols-2 gap-2">{BOUTIQUES.map(b=>(<button key={b.id} onClick={()=>setForm({...form,boutique:b.id})} className="p-4 border text-left" style={{ background:form.boutique===b.id?C.ink:'transparent', color:form.boutique===b.id?'#FFF':C.ink, borderColor:form.boutique===b.id?C.ink:C.line }}><div className="text-[10px] opacity-60 mb-1">BOUTIQUE</div><span style={{ fontFamily:'Fraunces,serif' }}>{b.name}</span></button>))}</div>
+</div>
+<Btn variant="black" className="w-full" disabled={!form.from||!form.returnDate}>CONFIRMER MA PRÉ-RÉSERVATION</Btn>
+<p className="text-[11px] text-center mt-3" style={{ color:C.mute }}>Une opticienne vous rappelle pour préciser votre correction.</p>
+</div>
+</div>
+);
+
+return (
+<div className="pb-32" style={{ background:C.bg }}>
+<div className="relative overflow-hidden" style={{ background:C.ink, color:'#FFF' }}>
+<OrnamentBg/>
+<div className="absolute top-0 right-0 w-48 h-48" style={{ background:'radial-gradient(circle at top right,rgba(212,175,55,0.3) 0%,transparent 70%)' }}/>
+<div className="relative px-6 pt-10 pb-12">
+<div className="text-[10px] tracking-[0.3em] font-semibold mb-5" style={goldText}>DIASPORA · TRE</div>
+<h1 className="text-[44px] leading-[0.98] mb-5" style={{ fontFamily:'Fraunces,serif', fontWeight:300, letterSpacing:'-0.01em' }}>La Tunisie{'\n'}à portée{'\n'}de regard.</h1>
+<p className="text-[14px] leading-relaxed opacity-80 max-w-[30ch]">Pensé pour les Tunisiens vivant à l'étranger.</p>
+</div>
+</div>
+<div className="px-5 pt-6 space-y-4 mb-10">
+{[
+{ k:'gift', icon:Gift, kicker:'SERVICE CADEAU', title:'Offrir des lunettes à un proche en Tunisie', sub:'Paiement EUR/CAD/USD, livraison dans toute la Tunisie, écrin et carte inclus.' },
+{ k:'return', icon:Plane, kicker:'RETOUR AU PAYS', title:'Préparer mes lunettes pour mes vacances en Tunisie', sub:'Réservation 4–6 semaines avant arrivée. Verres prêts le jour J.' },
+].map((opt,i)=>(
+<button key={opt.k} onClick={()=>setMode(opt.k)} className="block w-full text-left p-6 relative overflow-hidden" style={{ background:C.bgSoft, border:`1px solid ${C.line}` }}>
+<div className="absolute top-4 right-4 text-[60px] leading-none opacity-[0.08]" style={{ fontFamily:'Fraunces,serif', color:C.gold }}>{['I','II'][i]}</div>
+<div className="flex items-center gap-2 text-[10px] tracking-[0.25em] font-semibold mb-3" style={{ color:C.mute }}><opt.icon size={12} style={{ color:C.gold }}/>{opt.kicker}</div>
+<h3 className="text-[22px] leading-tight mb-2" style={{ fontFamily:'Fraunces,serif', color:C.ink }}>{opt.title}</h3>
+<p className="text-[12px] leading-relaxed mb-4" style={{ color:C.inkSoft }}>{opt.sub}</p>
+<div className="flex items-center gap-2 text-[10px] tracking-[0.22em] font-semibold" style={{ color:C.ink }}>COMMENCER <ChevronRight size={13} style={{ color:C.gold }}/></div>
+</button>
+))}
+</div>
+<div className="px-5 mb-10">
+<SectionHead kicker="COMMENT ÇA MARCHE" title="Trois étapes."/>
+{[{n:'01',t:'Vous nous contactez',d:'WhatsApp ou formulaire. Réponse en français, arabe ou anglais.'},{n:'02',t:'Choix conseillé à distance',d:'Photos, visagisme par visio, recommandation de monture et verres.'},{n:'03',t:'Livraison ou retrait',d:'Express 48–72h en Tunisie ou retrait gratuit en boutique.'}].map(s=>(<div key={s.n} className="py-5 flex gap-5" style={{ borderTop:`1px solid ${C.line}` }}><div className="text-[12px] font-semibold tabular-nums" style={{ color:C.gold, fontFamily:'Fraunces,serif' }}>{s.n}</div><div><div className="text-[15px] mb-1" style={{ fontFamily:'Fraunces,serif', color:C.ink }}>{s.t}</div><div className="text-[12px] leading-relaxed" style={{ color:C.inkSoft }}>{s.d}</div></div></div>))}
+</div>
+<div className="px-5">
+<a href="https://wa.me/21628630250" target="_blank" rel="noreferrer" className="block w-full p-5 relative overflow-hidden" style={{ background:C.ink, color:'#FFF' }}>
+<div className="absolute top-0 right-0 w-32 h-32" style={{ background:'radial-gradient(circle at top right,rgba(212,175,55,0.25) 0%,transparent 70%)' }}/>
+<div className="relative flex items-center gap-4">
+<div className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0" style={{ background:goldGrad }}><MessageCircle size={20} style={{ color:C.ink }}/></div>
+<div className="flex-1"><div className="text-[10px] tracking-[0.25em] font-semibold mb-1" style={goldText}>CONSEILLER EN LIGNE</div><div className="text-[15px]" style={{ fontFamily:'Fraunces,serif' }}>Parler à un opticien sur WhatsApp</div></div>
+<ArrowUpRight size={18}/>
+</div>
+</a>
+</div>
+</div>
+);
+}
+
+// ─── APPOINTMENT SCREEN ────────────────────────────────────────────
+function AppointmentScreen({ onBook }) {
+const [boutique,setBoutique]=useState('marsa');
+const [date,setDate]=useState('');
+const [time,setTime]=useState('');
+const [service,setService]=useState('exam');
+const [name,setName]=useState('');
+const [phone,setPhone]=useState('');
+const [note,setNote]=useState('');
+const [confirmed,setConfirmed]=useState(false);
+const slots=['09:30','10:30','11:30','14:00','15:00','16:00','17:00'];
+const services=[{k:'exam',label:'Examen de vue',d:'30 min · gratuit'},{k:'fitting',label:'Essayage & visagisme',d:'45 min · sans engagement'},{k:'progressive',label:'Conseil verres progressifs',d:'40 min · expert Varilux'},{k:'lenses',label:'Adaptation lentilles',d:'30 min'}];
+const doConfirm = () => { onBook({ ref:'RDV-'+Date.now(), service:services.find(s=>s.k===service)?.label, boutique:BOUTIQUES.find(b=>b.id===boutique)?.name, date, time, name, phone, note, status:'confirmé' }); setConfirmed(true); };
+if (confirmed) return (
+<div className="pb-32 px-5 pt-12 text-center" style={{ background:C.bg }}>
+<div className="w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-6" style={{ background:goldGrad }}><Check size={32} style={{ color:C.ink }} strokeWidth={2.5}/></div>
+<h2 className="text-[36px] mb-3" style={{ fontFamily:'Fraunces,serif', fontWeight:300, color:C.ink }}>Réservé.</h2>
+<p className="text-[13px] leading-relaxed max-w-[28ch] mx-auto mb-8" style={{ color:C.inkSoft }}>Un SMS de confirmation vous sera envoyé. À très vite chez Azzabi Optic.</p>
+<button onClick={()=>{setConfirmed(false);setDate('');setTime('');setName('');setPhone('');setNote('');}} className="text-[11px] tracking-[0.2em] underline underline-offset-4" style={{ color:C.ink }}>NOUVEAU RENDEZ-VOUS</button>
+</div>
+);
+return (
+<div className="pb-32" style={{ background:C.bg }}>
+<div className="px-5 pt-6 pb-4"><div className="text-[10px] tracking-[0.3em] font-semibold mb-1" style={{ color:C.mute }}>RENDEZ-VOUS</div><h2 className="text-[34px] leading-tight" style={{ fontFamily:'Fraunces,serif', fontWeight:300, color:C.ink }}>Réserver en boutique</h2></div>
+<div className="px-5 space-y-6">
+<div><div className="text-[10px] tracking-[0.25em] font-semibold mb-3" style={{ color:C.mute }}>PRESTATION</div><div className="space-y-2">{services.map(s=>(<button key={s.k} onClick={()=>setService(s.k)} className="w-full text-left p-4 border" style={{ background:service===s.k?C.bgWarm:'transparent', borderColor:service===s.k?C.gold:C.line }}><div className="flex items-center justify-between"><div><div className="text-[14px]" style={{ fontFamily:'Fraunces,serif', color:C.ink }}>{s.label}</div><div className="text-[11px] mt-0.5" style={{ color:C.mute }}>{s.d}</div></div>{service===s.k && <Check size={15} style={{ color:C.gold }} strokeWidth={2.5}/>}</div></button>))}</div></div>
+<div><div className="text-[10px] tracking-[0.25em] font-semibold mb-3" style={{ color:C.mute }}>BOUTIQUE</div><div className="grid grid-cols-2 gap-2">{BOUTIQUES.map(b=>(<button key={b.id} onClick={()=>setBoutique(b.id)} className="p-4 border text-left" style={{ background:boutique===b.id?C.ink:'transparent', color:boutique===b.id?'#FFF':C.ink, borderColor:boutique===b.id?C.ink:C.line }}><div className="text-[10px] opacity-60 mb-1">AZZABI OPTIC</div><div style={{ fontFamily:'Fraunces,serif' }}>{b.name}</div><div className="text-[10px] opacity-70 mt-0.5">{b.hours}</div></button>))}</div></div>
+<div><div className="text-[10px] tracking-[0.25em] font-semibold mb-3" style={{ color:C.mute }}>DATE</div><input type="date" value={date} onChange={e=>setDate(e.target.value)} min={new Date().toISOString().split('T')[0]} className="w-full px-4 py-3.5 text-[13px] outline-none" style={{ background:C.bgSoft, border:`1px solid ${C.line}`, color:C.ink }}/></div>
+{date && (<div><div className="text-[10px] tracking-[0.25em] font-semibold mb-3" style={{ color:C.mute }}>CRÉNEAU</div><div className="grid grid-cols-4 gap-2">{slots.map(s=>(<button key={s} onClick={()=>setTime(s)} className="py-3 text-[12px] tabular-nums border" style={{ background:time===s?C.ink:'transparent', color:time===s?'#FFF':C.ink, borderColor:time===s?C.ink:C.line }}>{s}</button>))}</div></div>)}
+<div><div className="text-[10px] tracking-[0.25em] font-semibold mb-3" style={{ color:C.mute }}>VOS COORDONNÉES</div><div className="space-y-2"><Input value={name} onChange={setName} placeholder="Nom complet *"/><Input value={phone} onChange={setPhone} placeholder="Téléphone / WhatsApp *"/><textarea value={note} onChange={e=>setNote(e.target.value)} rows={3} placeholder="Note optionnelle…" className="w-full px-4 py-3.5 text-[13px] outline-none resize-none" style={{ background:C.bgSoft, border:`1px solid ${C.line}`, color:C.ink }}/></div></div>
+<Btn variant="black" className="w-full" onClick={doConfirm} disabled={!(date&&time&&name&&phone)}>CONFIRMER LE RENDEZ-VOUS</Btn>
+</div>
+</div>
+);
+}
+
+// ─── PROFILE SCREEN ────────────────────────────────────────────────
+function ProfileScreen({ ccy, wished, toggleWish, onProduct, onCart, orders, appointments }) {
+const [view, setView] = useState('main');
+const wishedProducts = PRODUCTS.filter(p=>wished.includes(p.id));
+const statusColor = { 'confirmé':C.gold, 'en préparation':'#4A90E2', 'livré':C.success, 'annulé':C.error };
+
+if (view === 'favorites') return (
+<div className="pb-32" style={{ background:C.bg }}>
+<BackRow onBack={()=>setView('main')} label="MES FAVORIS"/>
+<div className="px-5 pt-2">
+{wishedProducts.length===0 ? (<div className="py-20 text-center"><Heart size={36} className="mx-auto mb-4" style={{ color:C.line }}/><div className="text-[15px]" style={{ fontFamily:'Fraunces,serif', color:C.ink }}>Aucun favori.</div></div>)
+: (<div className="grid grid-cols-2 gap-x-4 gap-y-7">{wishedProducts.map(p=>(<ProductCard key={p.id} p={p} ccy={ccy} onTap={onProduct} onWish={toggleWish} wished={true} onCart={onCart}/>))}</div>)}
+</div>
+</div>
+);
+
+if (view === 'orders') return (
+<div className="pb-32" style={{ background:C.bg }}>
+<BackRow onBack={()=>setView('main')} label="MES COMMANDES"/>
+<div className="px-5 pt-2">
+{orders.length===0 ? (<div className="py-20 text-center"><Package size={36} className="mx-auto mb-4" style={{ color:C.line }}/><div className="text-[15px]" style={{ fontFamily:'Fraunces,serif', color:C.ink }}>Aucune commande.</div></div>)
+: (<div className="space-y-3">{orders.map((o,i)=>(<div key={i} className="p-5" style={{ background:C.bgSoft, border:`1px solid ${C.line}` }}><div className="flex items-start justify-between mb-3"><div><div className="text-[10px] tracking-[0.2em] font-semibold mb-0.5" style={{ color:C.mute }}>{o.ref} · {o.date||o.created_at?.slice(0,10)}</div><div className="text-[14px]" style={{ fontFamily:'Fraunces,serif', color:C.ink }}>{o.cart?.length} pièce{o.cart?.length>1?'s':''}</div></div><span className="text-[10px] px-2 py-1 font-semibold capitalize" style={{ background:`${(statusColor[o.status]||C.mute)}22`, color:statusColor[o.status]||C.mute }}>{o.status}</span></div><div className="flex justify-between text-[12px] font-semibold pt-2" style={{ borderTop:`1px solid ${C.line}` }}><span style={{ color:C.ink }}>Total</span><span style={{ color:C.ink }}>{fmt(o.total,'TND')}</span></div></div>))}</div>)}
+</div>
+</div>
+);
+
+if (view === 'appointments') return (
+<div className="pb-32" style={{ background:C.bg }}>
+<BackRow onBack={()=>setView('main')} label="MES RENDEZ-VOUS"/>
+<div className="px-5 pt-2">
+{appointments.length===0 ? (<div className="py-20 text-center"><CalendarDays size={36} className="mx-auto mb-4" style={{ color:C.line }}/><div className="text-[15px]" style={{ fontFamily:'Fraunces,serif', color:C.ink }}>Aucun rendez-vous.</div></div>)
+: (<div className="space-y-3">{appointments.map((a,i)=>(<div key={i} className="p-5" style={{ background:C.bgSoft, border:`1px solid ${C.line}` }}><div className="flex justify-between items-start mb-2"><div><div className="text-[10px] tracking-[0.2em] font-semibold mb-0.5" style={{ color:C.mute }}>{a.date} · {a.time}</div><div className="text-[14px]" style={{ fontFamily:'Fraunces,serif', color:C.ink }}>{a.service}</div></div><span className="text-[10px] px-2 py-1 font-semibold" style={{ background:`${C.gold}22`, color:C.goldDark }}>{a.status}</span></div><div className="text-[12px] flex items-center gap-1.5" style={{ color:C.inkSoft }}><MapPin size={12} style={{ color:C.gold }}/>{a.boutique}</div></div>))}</div>)}
+</div>
+</div>
+);
+
+return (
+<div className="pb-32" style={{ background:C.bg }}>
+<div className="px-5 pt-6 pb-4"><div className="text-[10px] tracking-[0.3em] font-semibold mb-1" style={{ color:C.mute }}>PROFIL</div><h2 className="text-[34px] leading-tight" style={{ fontFamily:'Fraunces,serif', fontWeight:300, color:C.ink }}>Mon compte</h2></div>
+<div className="px-5">
+<div className="p-5 mb-6 relative overflow-hidden" style={{ background:C.ink, color:'#FFF' }}>
+<div className="absolute top-0 right-0 w-32 h-32" style={{ background:'radial-gradient(circle at top right,rgba(212,175,55,0.3) 0%,transparent 70%)' }}/>
+<div className="relative flex items-center gap-4">
+<div className="w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0" style={{ background:goldGrad }}><span className="text-[22px]" style={{ fontFamily:'Fraunces,serif', color:C.ink }}>A</span></div>
+<div className="flex-1"><div className="text-[16px]" style={{ fontFamily:'Fraunces,serif' }}>Client Azzabi</div><div className="text-[10px] tracking-[0.2em] font-semibold opacity-70">MEMBRE 2024</div></div>
+</div>
+</div>
+<div className="grid grid-cols-3 gap-2 mb-7">
+{[{v:wished.length,l:'Favoris',view:'favorites'},{v:orders.length,l:'Commandes',view:'orders'},{v:appointments.length,l:'RDV',view:'appointments'}].map(s=>(<button key={s.l} onClick={()=>setView(s.view)} className="p-4 text-center" style={{ background:C.bgSoft, border:`1px solid ${C.line}` }}><div className="text-[26px] tabular-nums" style={{ fontFamily:'Fraunces,serif', color:C.ink }}>{s.v}</div><div className="text-[10px] tracking-[0.2em] font-semibold mt-1" style={{ color:C.mute }}>{s.l.toUpperCase()}</div></button>))}
+</div>
+{[{icon:Heart,label:'Mes favoris',sub:`${wished.length} pièce${wished.length!==1?'s':''}`,view:'favorites'},{icon:Package,label:'Mes commandes',sub:orders.length>0?`${orders.length} commande${orders.length!==1?'s':''}`:'Aucune commande',view:'orders'},{icon:CalendarDays,label:'Mes rendez-vous',sub:appointments.length>0?`${appointments.length} rendez-vous`:'Aucun rendez-vous',view:'appointments'}].map((item,i)=>(<button key={i} className="w-full flex items-center gap-4 py-4" style={{ borderTop:`1px solid ${C.line}` }} onClick={()=>setView(item.view)}><div className="w-9 h-9 flex items-center justify-center flex-shrink-0" style={{ background:C.bgSoft }}><item.icon size={16} style={{ color:C.mute }}/></div><div className="flex-1 text-left"><div className="text-[13px]" style={{ color:C.ink }}>{item.label}</div><div className="text-[11px]" style={{ color:C.mute }}>{item.sub}</div></div><ChevronRight size={15} style={{ color:C.mute }}/></button>))}
+<a href="https://wa.me/21628630250" target="_blank" rel="noreferrer" className="w-full py-4 flex items-center gap-4" style={{ borderTop:`1px solid ${C.line}` }}><div className="w-9 h-9 flex items-center justify-center flex-shrink-0" style={{ background:C.bgSoft }}><MessageCircle size={16} style={{ color:C.mute }}/></div><div className="flex-1 text-left"><div className="text-[13px]" style={{ color:C.ink }}>Service client</div><div className="text-[11px]" style={{ color:C.mute }}>+216 28 630 250 · WhatsApp</div></div><ArrowUpRight size={15} style={{ color:C.mute }}/></a>
+<div className="mt-4 p-4 relative" style={{ background:C.bgWarm }}><GoldBar/><div className="flex items-start gap-3 pl-3"><Tag size={14} style={{ color:C.gold, marginTop:1 }}/><div className="text-[12px] leading-relaxed" style={{ color:C.inkSoft }}><strong style={{ color:C.ink }}>Code promo diaspora :</strong> utilisez <strong>DIASPORA10</strong> au panier pour –10% sur votre première commande.</div></div></div>
+<div className="mt-10 text-center pb-6"><div className="flex justify-center mb-3"><AzzabiMark size={26}/></div><div className="text-[9px] tracking-[0.4em] font-semibold" style={{ color:C.mute }}>— EST. 2010 — TUNIS —</div></div>
+</div>
+</div>
+);
+}
+
 export default function AzzabiOpticApp() {
 const [tab, setTab] = useState('home');
 const [ccy, setCcy] = useState('TND');
@@ -573,8 +749,11 @@ try {
 }, []);
 
 const tabs = [
-{ k:'home', icon:Home, label:'Accueil' },
-{ k:'catalog', icon:ShoppingBag, label:'Boutique' },
+{ k:'home',        icon:Home,         label:'Accueil' },
+{ k:'catalog',     icon:ShoppingBag,  label:'Boutique' },
+{ k:'diaspora',    icon:Globe2,       label:'Diaspora' },
+{ k:'appointment', icon:CalendarDays, label:'RDV' },
+{ k:'profile',     icon:User,         label:'Profil' },
 ];
 
 const notifCount = orders.filter(o=>o.status==='confirmé').length;
@@ -584,6 +763,9 @@ return (
 <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400&family=Manrope:wght@400;500;600;700&family=Montserrat:wght@800;900&display=swap'); .scrollbar-hide::-webkit-scrollbar{display:none} .scrollbar-hide{-ms-overflow-style:none;scrollbar-width:none} details summary::-webkit-details-marker{display:none} @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}} .fade-in{animation:fadeIn 0.3s ease-out}`}</style>
 <TopBar ccy={ccy} setCcy={setCcy} lang={lang} setLang={setLang} cartCount={cartCount} onCart={()=>setCartOpen(true)} notifCount={notifCount}/>
 <div key={tab} className="fade-in" dir={dir}>
+{tab==='diaspora' && <DiasporaScreen ccy={ccy} lang={lang}/>}
+{tab==='appointment' && <AppointmentScreen onBook={handleBook}/>}
+{tab==='profile' && <ProfileScreen ccy={ccy} wished={wished} toggleWish={toggleWish} onProduct={setSelectedProduct} onCart={addToCart} orders={orders} appointments={appointments}/>}
 {tab==='home' && <div className="pb-32" style={{ background:C.bg }}><div className="px-6 pt-10 pb-12"><div className="flex items-center gap-2 text-[10px] tracking-[0.3em] font-semibold mb-6" style={{ color:C.mute }}><span className="w-6 h-px" style={{ background:C.gold }}/>OPTICIEN DEPUIS 2010</div><h1 className="text-[58px] leading-[0.92] mb-6" style={{ fontFamily:'Fraunces,serif', fontWeight:300, color:C.ink, letterSpacing:'-0.02em' }}>L'art de voir.</h1><p className="text-[14px] leading-relaxed mb-8 max-w-[28ch]" style={{ color:C.inkSoft }}>Maison opticienne tunisienne. La Marsa & Aïn Zaghouan. Sélection rigoureuse de Fendi, Celine, Dior, Tom Ford, Persol, Ray-Ban.</p><button onClick={()=>setTab('catalog')} className="inline-flex items-center gap-3 px-5 py-3.5 text-[11px] tracking-[0.2em] font-semibold" style={{ background:C.ink, color:'#FFF' }}>DÉCOUVRIR LA COLLECTION<ArrowUpRight size={14}/></button></div><div className="px-5 mb-12"><div className="relative overflow-hidden aspect-[3/2]"><img src="https://azzabioptic.com/wp-content/uploads/2025/09/desktop_fr-FR.webp" alt="Azzabi Optic boutique" className="w-full h-full object-cover" onError={e=>{e.target.src='https://picsum.photos/seed/azzabi-optic-boutique/600/400';}}/><div className="absolute bottom-0 left-0 right-0 p-4" style={{ background:'linear-gradient(transparent,rgba(0,0,0,0.6))' }}><div className="text-[10px] tracking-[0.3em] font-semibold text-white opacity-80">LA MARSA · AÏN ZAGHOUAN</div></div></div></div><div className="px-5 mb-12"><div className="text-[10px] tracking-[0.3em] font-semibold mb-1" style={{ color:C.mute }}>01 — COLLECTION</div><h3 className="text-[26px] mb-5" style={{ fontFamily:'Fraunces,serif', color:C.ink }}>Maisons d'exception</h3><div className="flex gap-4 overflow-x-auto pb-2 px-5 scrollbar-hide">{products.filter(p=>p.new||p.is_new).map(p=>(<div key={p.id} className="w-[170px] flex-shrink-0"><ProductCard p={p} ccy={ccy} onTap={setSelectedProduct} onWish={toggleWish} wished={wished.includes(p.id)} onCart={addToCart}/></div>))}</div></div><div className="px-5 py-4 flex items-center gap-4"><span className="h-px flex-1" style={{ background:C.line }}/><AzzabiMark size={26}/><span className="h-px flex-1" style={{ background:C.line }}/></div><div className="px-5 pt-8 mb-12"><div className="text-[10px] tracking-[0.3em] font-semibold mb-1" style={{ color:C.mute }}>02 — JOURNAL</div><h3 className="text-[26px] mb-5" style={{ fontFamily:'Fraunces,serif', color:C.ink }}>Notes d'opticien</h3>{[{kicker:'GUIDE', title:'Verres progressifs Varilux : ce qu\'il faut savoir', read:'6 min', img:'https://azzabioptic.com/wp-content/uploads/2026/04/Gemini_Generated_Image_knp2g7knp2g7knp2.png', url:'https://azzabioptic.com'}, {kicker:'TENDANCE', title:'Lunettes de soleil 2026 : les formes qui s\'imposent', read:'4 min', img:'https://azzabioptic.com/wp-content/uploads/2025/09/desktop_fr-FR.webp', url:'https://azzabioptic.com'}, {kicker:'EXPERTISE', title:'Lentilles de couleur : choisir une teinte naturelle', read:'5 min', img:'https://picsum.photos/seed/contact-lenses-color-azzabi/400/280', url:'https://azzabioptic.com'}].map((a,i)=>(<a key={i} href={a.url} target="_blank" rel="noreferrer" className="block py-5 flex items-start gap-4" style={{ borderTop:`1px solid ${C.line}` }}><div className="flex-1 min-w-0"><div className="text-[9px] tracking-[0.25em] font-semibold mb-1.5" style={{ color:C.gold }}>{a.kicker}</div><div className="text-[15px] leading-snug mb-2" style={{ fontFamily:'Fraunces,serif', color:C.ink }}>{a.title}</div><div className="text-[11px]" style={{ color:C.mute }}>{a.read} de lecture</div></div><div className="w-24 h-20 flex-shrink-0 relative overflow-hidden" style={{ background:C.bgSoft }}><img src={a.img} alt={a.title} className="absolute inset-0 w-full h-full object-cover" onError={e => { e.target.style.display='none'; }}/></div></a>))}</div></div>}
 {tab==='catalog' && <div className="pb-32" style={{ background:C.bg }}><div className="px-5 pt-6 pb-4"><div className="text-[10px] tracking-[0.3em] font-semibold mb-1" style={{ color:C.mute }}>BOUTIQUE</div><h2 className="text-[34px]" style={{ fontFamily:'Fraunces,serif', fontWeight:300, color:C.ink, letterSpacing:'-0.01em' }}>Le catalogue</h2>{apiReady && <div className="text-[10px] mt-1" style={{ color:C.success }}>● API connectée</div>}</div><div className="px-5 grid grid-cols-2 gap-x-4 gap-y-7">{products.map(p=>(<ProductCard key={p.id} p={p} ccy={ccy} onTap={setSelectedProduct} onWish={toggleWish} wished={wished.includes(p.id)} onCart={addToCart}/>))}</div></div>}
 </div>

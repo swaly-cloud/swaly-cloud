@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db/setup');
+const { readDB, writeDB } = require('../db/setup');
 
 const makeRef = () => 'RDV-' + Date.now().toString(36).toUpperCase();
 
@@ -12,6 +12,7 @@ router.post('/', (req, res) => {
     return res.status(400).json({ error: 'Données manquantes' });
   }
 
+  const db = readDB();
   const appt = {
     id: Date.now(),
     ref: makeRef(),
@@ -26,15 +27,16 @@ router.post('/', (req, res) => {
     created_at: new Date().toISOString(),
   };
 
-  db.data.appointments.unshift(appt);
-  db.write();
+  db.appointments.unshift(appt);
+  writeDB(db);
 
   res.status(201).json(appt);
 });
 
 // GET /api/appointments
 router.get('/', (req, res) => {
-  res.json(db.data.appointments);
+  const db = readDB();
+  res.json(db.appointments);
 });
 
 // PATCH /api/appointments/:ref/status
@@ -43,11 +45,12 @@ router.patch('/:ref/status', (req, res) => {
   const valid = ['confirmé', 'annulé', 'terminé'];
   if (!valid.includes(status)) return res.status(400).json({ error: 'Statut invalide' });
 
-  const appt = db.data.appointments.find(a => a.ref === req.params.ref);
+  const db = readDB();
+  const appt = db.appointments.find(a => a.ref === req.params.ref);
   if (!appt) return res.status(404).json({ error: 'Rendez-vous introuvable' });
 
   appt.status = status;
-  db.write();
+  writeDB(db);
 
   res.json(appt);
 });

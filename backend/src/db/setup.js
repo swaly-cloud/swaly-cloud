@@ -1,11 +1,7 @@
-const low = require('lowdb');
-const FileSync = require('lowdb/adapters/FileSync');
+const fs = require('fs');
 const path = require('path');
 
 const DB_PATH = path.join(__dirname, '../../db.json');
-
-const adapter = new FileSync(DB_PATH);
-const db = low(adapter, { products: [], orders: [], appointments: [] });
 
 const SEED_PRODUCTS = [
   { id:1,  brand:'FENDI',       name:'FE40140U Acétate',       cat:'soleil',    genre:'femme',   price:1790, img:'https://pretavoir.us/cdn/shop/files/fendi-ff-diamonds-fe40140u-56n-hd-1_800x.jpg?v=1740410082', accent:'#D4AF37', is_new:true },
@@ -26,10 +22,35 @@ const SEED_PRODUCTS = [
   { id:16, brand:'RAY-BAN',     name:'Aviator RB3025 Or',      cat:'soleil',    genre:'homme',   price:750,  img:'https://pretavoir.us/cdn/shop/products/ray-ban-aviator-large-metal-rb-3025-0013m-hd-3_800x.jpg?v=1687521942', accent:'#D4AF37', is_new:false },
 ];
 
-// Seed products if empty
-if (db.data.products.length === 0) {
-  db.data.products = SEED_PRODUCTS;
-  db.write();
+// Initialize database file
+function initDB() {
+  if (!fs.existsSync(DB_PATH)) {
+    const data = { products: SEED_PRODUCTS, orders: [], appointments: [] };
+    fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
+    console.log('Database initialized at', DB_PATH);
+  }
 }
 
-module.exports = db;
+// Read database
+function readDB() {
+  try {
+    const data = fs.readFileSync(DB_PATH, 'utf8');
+    return JSON.parse(data);
+  } catch (err) {
+    console.error('Error reading database:', err.message);
+    return { products: [], orders: [], appointments: [] };
+  }
+}
+
+// Write database
+function writeDB(data) {
+  try {
+    fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
+  } catch (err) {
+    console.error('Error writing database:', err.message);
+  }
+}
+
+initDB();
+
+module.exports = { readDB, writeDB };

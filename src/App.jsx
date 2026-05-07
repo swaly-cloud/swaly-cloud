@@ -791,7 +791,11 @@ return (
 </button>
 </div>
 <div className="px-5 pt-6 pb-32">
+<div className="text-[10px] tracking-[0.25em] font-semibold mb-2" style={{ color:C.mute }}>{selectedProduct.brand}</div>
 <h1 className="text-[28px] leading-tight mb-2" style={{ fontFamily:'Fraunces,serif', fontWeight:400, color:C.ink }}>{selectedProduct.name}</h1>
+{selectedProduct.desc && (
+<p className="text-[13px] leading-relaxed mb-4" style={{ color:C.inkSoft }}>{selectedProduct.desc}</p>
+)}
 <div className="flex items-baseline gap-3 mb-6 pb-6" style={{ borderBottom:`1px solid ${C.line}` }}>
 <div className="text-[26px] tabular-nums font-semibold" style={{ color:C.ink }}>{fmt(selectedProduct.price,ccy)}</div>
 </div>

@@ -229,8 +229,8 @@ function TopBar({ ccy, setCcy, lang, setLang, cartCount, onCart, notifCount }) {
 const [open, setOpen] = useState(null);
 return (
 <div className="sticky top-0 z-30" style={{ background:'rgba(255,255,255,0.97)', backdropFilter:'blur(12px)', borderBottom:`1px solid ${C.line}` }}>
-<div className="px-4 py-2 flex items-center justify-between">
-<AzzabiLogo height={20}/>
+<div className="px-4 py-1.5 flex items-center justify-between">
+<AzzabiLogo height={18}/>
 <div className="flex items-center gap-1.5">
 <button onClick={()=>setOpen(open==='ccy'?null:'ccy')}
 className="px-2 py-1 text-[10px] tracking-[0.15em] font-semibold border"
@@ -248,7 +248,7 @@ style={{ background:goldGrad, color:C.ink }}>{cartCount}</span>
 </div>
 </div>
 {open==='ccy' && (
-<div className="px-4 pb-3 flex gap-2">
+<div className="px-4 pb-2 flex gap-2">
 {Object.keys(FX).map(c=>(
 <button key={c} onClick={()=>{setCcy(c);setOpen(null);}}
 className="flex-1 py-2 text-[10px] tracking-wider border"
@@ -259,7 +259,7 @@ style={{ background:ccy===c?C.ink:'transparent', color:ccy===c?'#FFF':C.ink, bor
 </div>
 )}
 {open==='lang' && (
-<div className="px-4 pb-3 flex gap-2">
+<div className="px-4 pb-2 flex gap-2">
 {[['fr','Français'],['en','English'],['ar','العربية']].map(([k,l])=>(
 <button key={k} onClick={()=>{setLang(k);setOpen(null);}}
 className="flex-1 py-2 text-[10px] border"

@@ -786,7 +786,7 @@ return (
 <div className="fixed inset-0 z-50 overflow-y-auto" style={{ background:C.bg }}>
 <div className="aspect-square relative" style={{ background:C.bgSoft }}>
 <img src={selectedProduct.img} alt={`${selectedProduct.brand}`} className="absolute inset-0 w-full h-full object-contain" style={{ padding:'8%' }}/>
-<button onClick={()=>setSelectedProduct(null)} className="absolute top-5 left-5 w-10 h-10 rounded-full flex items-center justify-center" style={{ background:'rgba(0,0,0,0.08)', backdropFilter:'blur(10px)' }}>
+<button onClick={()=>setSelectedProduct(null)} className="absolute top-5 left-5 w-10 h-10 rounded-full flex items-center justify-center z-10" style={{ background:'rgba(0,0,0,0.08)', backdropFilter:'blur(10px)', pointerEvents:'auto' }}>
 <X size={18} style={{ color:C.ink }}/>
 </button>
 </div>

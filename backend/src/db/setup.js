@@ -1,11 +1,11 @@
-const { Low } = require('lowdb');
-const { JSONFile } = require('lowdb/node');
+const low = require('lowdb');
+const FileSync = require('lowdb/adapters/FileSync');
 const path = require('path');
 
 const DB_PATH = path.join(__dirname, '../../db.json');
 
-const adapter = new JSONFile(DB_PATH);
-const db = new Low(adapter, { products: [], orders: [], appointments: [] });
+const adapter = new FileSync(DB_PATH);
+const db = low(adapter, { products: [], orders: [], appointments: [] });
 
 const SEED_PRODUCTS = [
   { id:1,  brand:'FENDI',       name:'FE40140U Acétate',       cat:'soleil',    genre:'femme',   price:1790, img:'https://pretavoir.us/cdn/shop/files/fendi-ff-diamonds-fe40140u-56n-hd-1_800x.jpg?v=1740410082', accent:'#D4AF37', is_new:true },
@@ -26,14 +26,10 @@ const SEED_PRODUCTS = [
   { id:16, brand:'RAY-BAN',     name:'Aviator RB3025 Or',      cat:'soleil',    genre:'homme',   price:750,  img:'https://pretavoir.us/cdn/shop/products/ray-ban-aviator-large-metal-rb-3025-0013m-hd-3_800x.jpg?v=1687521942', accent:'#D4AF37', is_new:false },
 ];
 
-async function init() {
-  await db.read();
-  if (db.data.products.length === 0) {
-    db.data.products = SEED_PRODUCTS;
-    await db.write();
-  }
+// Seed products if empty
+if (db.data.products.length === 0) {
+  db.data.products = SEED_PRODUCTS;
+  db.write();
 }
-
-init().catch(console.error);
 
 module.exports = db;

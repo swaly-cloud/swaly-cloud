@@ -3,8 +3,7 @@ const router = express.Router();
 const db = require('../db/setup');
 
 // GET /api/products
-router.get('/', async (req, res) => {
-  await db.read();
+router.get('/', (req, res) => {
   const { cat, genre, q, sort } = req.query;
 
   let results = db.data.products;
@@ -27,8 +26,7 @@ router.get('/', async (req, res) => {
 });
 
 // GET /api/products/:id
-router.get('/:id', async (req, res) => {
-  await db.read();
+router.get('/:id', (req, res) => {
   const product = db.data.products.find(p => p.id === Number(req.params.id));
   if (!product) return res.status(404).json({ error: 'Produit introuvable' });
   res.json(product);

@@ -228,7 +228,7 @@ style={{ background:'rgba(0,0,0,0.08)', backdropFilter:'blur(8px)' }}>
 function TopBar({ ccy, setCcy, lang, setLang, cartCount, onCart, notifCount }) {
 const [open, setOpen] = useState(null);
 return (
-<div className="sticky top-0 z-30" style={{ background:'rgba(255,255,255,0.97)', backdropFilter:'blur(12px)', borderBottom:`1px solid ${C.line}`, paddingTop:'max(0px, env(safe-area-inset-top))' }}>
+<div className="sticky top-0 z-30" style={{ background:'rgba(255,255,255,0.97)', backdropFilter:'blur(12px)', borderBottom:`1px solid ${C.line}` }}>
 <div className="px-4 py-3 flex items-center justify-between">
 <AzzabiLogo height={24}/>
 <div className="flex items-center gap-1.5">

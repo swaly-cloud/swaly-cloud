@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { api } from './api';
+import AdminPanel from './AdminPanel';
 import {
 Home, ShoppingBag, Globe2, CalendarDays, User, Search, Heart,
 MapPin, Phone, Plane, Gift, ChevronRight, ChevronLeft, X, Check,
@@ -628,7 +629,7 @@ return (
 }
 
 // ─── PROFILE SCREEN ────────────────────────────────────────────────
-function ProfileScreen({ ccy, wished, toggleWish, onProduct, onCart, orders, appointments }) {
+function ProfileScreen({ ccy, wished, toggleWish, onProduct, onCart, orders, appointments, onAdminOpen }) {
 const [view, setView] = useState('main');
 const wishedProducts = PRODUCTS.filter(p=>wished.includes(p.id));
 const statusColor = { 'confirmé':C.gold, 'en préparation':'#4A90E2', 'livré':C.success, 'annulé':C.error };
@@ -680,7 +681,7 @@ return (
 {[{icon:Heart,label:'Mes favoris',sub:`${wished.length} pièce${wished.length!==1?'s':''}`,view:'favorites'},{icon:Package,label:'Mes commandes',sub:orders.length>0?`${orders.length} commande${orders.length!==1?'s':''}`:'Aucune commande',view:'orders'},{icon:CalendarDays,label:'Mes rendez-vous',sub:appointments.length>0?`${appointments.length} rendez-vous`:'Aucun rendez-vous',view:'appointments'}].map((item,i)=>(<button key={i} className="w-full flex items-center gap-4 py-4" style={{ borderTop:`1px solid ${C.line}` }} onClick={()=>setView(item.view)}><div className="w-9 h-9 flex items-center justify-center flex-shrink-0" style={{ background:C.bgSoft }}><item.icon size={16} style={{ color:C.mute }}/></div><div className="flex-1 text-left"><div className="text-[13px]" style={{ color:C.ink }}>{item.label}</div><div className="text-[11px]" style={{ color:C.mute }}>{item.sub}</div></div><ChevronRight size={15} style={{ color:C.mute }}/></button>))}
 <a href="https://wa.me/21628630250" target="_blank" rel="noreferrer" className="w-full py-4 flex items-center gap-4" style={{ borderTop:`1px solid ${C.line}` }}><div className="w-9 h-9 flex items-center justify-center flex-shrink-0" style={{ background:C.bgSoft }}><MessageCircle size={16} style={{ color:C.mute }}/></div><div className="flex-1 text-left"><div className="text-[13px]" style={{ color:C.ink }}>Service client</div><div className="text-[11px]" style={{ color:C.mute }}>+216 28 630 250 · WhatsApp</div></div><ArrowUpRight size={15} style={{ color:C.mute }}/></a>
 <div className="mt-4 p-4 relative" style={{ background:C.bgWarm }}><GoldBar/><div className="flex items-start gap-3 pl-3"><Tag size={14} style={{ color:C.gold, marginTop:1 }}/><div className="text-[12px] leading-relaxed" style={{ color:C.inkSoft }}><strong style={{ color:C.ink }}>Code promo diaspora :</strong> utilisez <strong>DIASPORA10</strong> au panier pour –10% sur votre première commande.</div></div></div>
-<div className="mt-10 text-center pb-6"><div className="flex justify-center mb-3"><AzzabiMark size={26}/></div><div className="text-[9px] tracking-[0.4em] font-semibold" style={{ color:C.mute }}>— EST. 2010 — TUNIS —</div></div>
+<div className="mt-10 text-center pb-6"><div className="flex justify-center mb-3"><AzzabiMark size={26}/></div><div className="text-[9px] tracking-[0.4em] font-semibold" style={{ color:C.mute }}>— EST. 2010 — TUNIS —</div><button onClick={onAdminOpen} className="mt-4 text-[10px] tracking-[0.2em]" style={{ color:C.line }}>⚙ ADMIN</button></div>
 </div>
 </div>
 );
@@ -696,6 +697,7 @@ const [cartOpen, setCartOpen] = useState(false);
 const [selectedProduct, setSelectedProduct] = useState(null);
 const [orders, setOrders] = useState([]);
 const [appointments, setAppointments] = useState([]);
+const [showAdmin, setShowAdmin] = useState(false);
 const [products, setProducts] = useState(PRODUCTS);
 const [apiReady, setApiReady] = useState(false);
 
@@ -765,7 +767,7 @@ return (
 <div key={tab} className="fade-in" dir={dir}>
 {tab==='diaspora' && <DiasporaScreen ccy={ccy} lang={lang}/>}
 {tab==='appointment' && <AppointmentScreen onBook={handleBook}/>}
-{tab==='profile' && <ProfileScreen ccy={ccy} wished={wished} toggleWish={toggleWish} onProduct={setSelectedProduct} onCart={addToCart} orders={orders} appointments={appointments}/>}
+{tab==='profile' && <ProfileScreen ccy={ccy} wished={wished} toggleWish={toggleWish} onProduct={setSelectedProduct} onCart={addToCart} orders={orders} appointments={appointments} onAdminOpen={()=>setShowAdmin(true)}/>}
 {tab==='home' && <div className="pb-32" style={{ background:C.bg }}><div className="px-6 pt-10 pb-12"><div className="flex items-center gap-2 text-[10px] tracking-[0.3em] font-semibold mb-6" style={{ color:C.mute }}><span className="w-6 h-px" style={{ background:C.gold }}/>OPTICIEN DEPUIS 2010</div><h1 className="text-[58px] leading-[0.92] mb-6" style={{ fontFamily:'Fraunces,serif', fontWeight:300, color:C.ink, letterSpacing:'-0.02em' }}>L'art de voir.</h1><p className="text-[14px] leading-relaxed mb-8 max-w-[28ch]" style={{ color:C.inkSoft }}>Maison opticienne tunisienne. La Marsa & Aïn Zaghouan. Sélection rigoureuse de Fendi, Celine, Dior, Tom Ford, Persol, Ray-Ban.</p><button onClick={()=>setTab('catalog')} className="inline-flex items-center gap-3 px-5 py-3.5 text-[11px] tracking-[0.2em] font-semibold" style={{ background:C.ink, color:'#FFF' }}>DÉCOUVRIR LA COLLECTION<ArrowUpRight size={14}/></button></div><div className="px-5 mb-12"><div className="relative overflow-hidden aspect-[3/2]"><img src="https://azzabioptic.com/wp-content/uploads/2025/09/desktop_fr-FR.webp" alt="Azzabi Optic boutique" className="w-full h-full object-cover" onError={e=>{e.target.src='https://picsum.photos/seed/azzabi-optic-boutique/600/400';}}/><div className="absolute bottom-0 left-0 right-0 p-4" style={{ background:'linear-gradient(transparent,rgba(0,0,0,0.6))' }}><div className="text-[10px] tracking-[0.3em] font-semibold text-white opacity-80">LA MARSA · AÏN ZAGHOUAN</div></div></div></div><div className="px-5 mb-12"><div className="text-[10px] tracking-[0.3em] font-semibold mb-1" style={{ color:C.mute }}>01 — COLLECTION</div><h3 className="text-[26px] mb-5" style={{ fontFamily:'Fraunces,serif', color:C.ink }}>Maisons d'exception</h3><div className="flex gap-4 overflow-x-auto pb-2 px-5 scrollbar-hide">{products.filter(p=>p.new||p.is_new).map(p=>(<div key={p.id} className="w-[170px] flex-shrink-0"><ProductCard p={p} ccy={ccy} onTap={setSelectedProduct} onWish={toggleWish} wished={wished.includes(p.id)} onCart={addToCart}/></div>))}</div></div><div className="px-5 py-4 flex items-center gap-4"><span className="h-px flex-1" style={{ background:C.line }}/><AzzabiMark size={26}/><span className="h-px flex-1" style={{ background:C.line }}/></div><div className="px-5 pt-8 mb-12"><div className="text-[10px] tracking-[0.3em] font-semibold mb-1" style={{ color:C.mute }}>02 — JOURNAL</div><h3 className="text-[26px] mb-5" style={{ fontFamily:'Fraunces,serif', color:C.ink }}>Notes d'opticien</h3>{[{kicker:'GUIDE', title:'Verres progressifs Varilux : ce qu\'il faut savoir', read:'6 min', img:'https://azzabioptic.com/wp-content/uploads/2026/04/Gemini_Generated_Image_knp2g7knp2g7knp2.png', url:'https://azzabioptic.com'}, {kicker:'TENDANCE', title:'Lunettes de soleil 2026 : les formes qui s\'imposent', read:'4 min', img:'https://azzabioptic.com/wp-content/uploads/2025/09/desktop_fr-FR.webp', url:'https://azzabioptic.com'}, {kicker:'EXPERTISE', title:'Lentilles de couleur : choisir une teinte naturelle', read:'5 min', img:'https://picsum.photos/seed/contact-lenses-color-azzabi/400/280', url:'https://azzabioptic.com'}].map((a,i)=>(<a key={i} href={a.url} target="_blank" rel="noreferrer" className="block py-5 flex items-start gap-4" style={{ borderTop:`1px solid ${C.line}` }}><div className="flex-1 min-w-0"><div className="text-[9px] tracking-[0.25em] font-semibold mb-1.5" style={{ color:C.gold }}>{a.kicker}</div><div className="text-[15px] leading-snug mb-2" style={{ fontFamily:'Fraunces,serif', color:C.ink }}>{a.title}</div><div className="text-[11px]" style={{ color:C.mute }}>{a.read} de lecture</div></div><div className="w-24 h-20 flex-shrink-0 relative overflow-hidden" style={{ background:C.bgSoft }}><img src={a.img} alt={a.title} className="absolute inset-0 w-full h-full object-cover" onError={e => { e.target.style.display='none'; }}/></div></a>))}</div></div>}
 {tab==='catalog' && <div className="pb-32" style={{ background:C.bg }}><div className="px-5 pt-6 pb-4"><div className="text-[10px] tracking-[0.3em] font-semibold mb-1" style={{ color:C.mute }}>BOUTIQUE</div><h2 className="text-[34px]" style={{ fontFamily:'Fraunces,serif', fontWeight:300, color:C.ink, letterSpacing:'-0.01em' }}>Le catalogue</h2>{apiReady && <div className="text-[10px] mt-1" style={{ color:C.success }}>● API connectée</div>}</div><div className="px-5 grid grid-cols-2 gap-x-4 gap-y-7">{products.map(p=>(<ProductCard key={p.id} p={p} ccy={ccy} onTap={setSelectedProduct} onWish={toggleWish} wished={wished.includes(p.id)} onCart={addToCart}/>))}</div></div>}
 </div>
@@ -802,6 +804,12 @@ return (
 {cartOpen && (
 <CartScreen cart={cart} ccy={ccy} lang={lang} onClose={()=>setCartOpen(false)} onUpdate={updateQty} onRemove={removeFromCart} onCheckout={handleCheckout} orders={orders}/>
 )}
+{showAdmin && <AdminPanel onClose={()=>setShowAdmin(false)}/>}
+{/* Secret admin trigger — triple tap on logo area */}
+<button onClick={()=>setShowAdmin(true)}
+  className="fixed bottom-24 right-4 w-8 h-8 rounded-full opacity-0 z-50"
+  aria-label="Admin"
+  style={{ background:'transparent' }}/>
 </div>
 );
 }

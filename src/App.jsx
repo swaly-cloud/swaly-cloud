@@ -229,8 +229,8 @@ function TopBar({ ccy, setCcy, lang, setLang, cartCount, onCart, notifCount }) {
 const [open, setOpen] = useState(null);
 return (
 <div className="sticky top-0 z-30" style={{ background:'rgba(255,255,255,0.97)', backdropFilter:'blur(12px)', borderBottom:`1px solid ${C.line}` }}>
-<div className="px-4 py-3 flex items-center justify-between">
-<AzzabiLogo height={24}/>
+<div className="px-4 py-2 flex items-center justify-between">
+<AzzabiLogo height={20}/>
 <div className="flex items-center gap-1.5">
 <button onClick={()=>setOpen(open==='ccy'?null:'ccy')}
 className="px-2 py-1 text-[10px] tracking-[0.15em] font-semibold border"

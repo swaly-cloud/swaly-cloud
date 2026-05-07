@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#0A0A0A"/>
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F5D547"/>
+      <stop offset="50%" stop-color="#D4AF37"/>
+      <stop offset="100%" stop-color="#7A5510"/>
+    </linearGradient>
+  </defs>
+  <!-- Crown/star -->
+  <polygon points="256,60 276,130 310,80 290,148 340,110 304,168 360,150 312,196 370,196 312,228 370,260 308,244 340,304 284,272 290,340 256,296 222,340 228,272 172,304 204,244 142,260 200,228 142,196 200,196 152,150 208,168 172,110 222,148 202,80 236,130" fill="url(#g)"/>
+  <!-- Left lens -->
+  <circle cx="176" cy="320" r="70" fill="none" stroke="url(#g)" stroke-width="18"/>
+  <circle cx="176" cy="320" r="44" fill="#0A0A0A"/>
+  <!-- Bridge -->
+  <rect x="246" y="314" width="20" height="12" fill="url(#g)" rx="4"/>
+  <!-- Right lens -->
+  <circle cx="336" cy="320" r="70" fill="none" stroke="url(#g)" stroke-width="18"/>
+  <circle cx="336" cy="320" r="44" fill="#0A0A0A"/>
+  <!-- Temples -->
+  <rect x="106" y="314" width="28" height="12" fill="url(#g)" rx="4"/>
+  <rect x="378" y="314" width="28" height="12" fill="url(#g)" rx="4"/>
+  <!-- Stems -->
+  <rect x="84" y="314" width="24" height="40" fill="url(#g)" rx="4"/>
+  <rect x="404" y="314" width="24" height="40" fill="url(#g)" rx="4"/>
+</svg>

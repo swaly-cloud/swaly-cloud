@@ -21,9 +21,11 @@ export default defineConfig({
         lang: 'fr',
         categories: ['shopping', 'lifestyle'],
         icons: [
+          { src: '/icons/azzabi-logo.svg', sizes: '192x192', type: 'image/svg+xml' },
+          { src: '/icons/azzabi-logo.svg', sizes: '512x512', type: 'image/svg+xml' },
+          { src: '/icons/azzabi-logo.svg', sizes: '512x512', type: 'image/svg+xml', purpose: 'maskable' },
           { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
-          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
         screenshots: [
           {

@@ -4,33 +4,38 @@ import { useARCamera } from '../hooks/useARCamera';
 
 const C = { ink: '#0A0A0A', gold: '#D4AF37' };
 
-// Convert MediaPipe normalized coords (0-1) to CSS % in the container,
-// accounting for object-cover crop (video is scaled to fill container).
-function glassesStyle(bb, vW, vH, cW, cH) {
-  if (!bb || !vW || !vH || !cW || !cH) return null;
+// Position glasses using MediaPipe eye keypoints (index 0 = left eye, 1 = right eye).
+// Keypoints are normalized (0-1). Video is displayed with object-cover + CSS scaleX(-1) mirror.
+function glassesStyle(detection, vW, vH, cW, cH) {
+  if (!detection || !vW || !vH || !cW || !cH) return null;
 
-  // Scale factor: object-cover uses the larger ratio
+  const kp = detection.keypoints;
+  if (!kp || kp.length < 2) return null;
+
+  // object-cover scale + crop
   const scale = Math.max(cW / vW, cH / vH);
-  const dispW = vW * scale;   // displayed video size (may exceed container)
-  const dispH = vH * scale;
-  const cropX = (dispW - cW) / 2;  // pixels cropped on each side
-  const cropY = (dispH - cH) / 2;
+  const cropX = (vW * scale - cW) / 2;
+  const cropY = (vH * scale - cH) / 2;
 
-  // MediaPipe returns normalized coords (0-1), convert to video pixels then display pixels
-  const faceLeft   = bb.originX * vW * scale - cropX;
-  const faceTop    = bb.originY * vH * scale - cropY;
-  const faceW      = bb.width   * vW * scale;
-  const faceH      = bb.height  * vH * scale;
+  // Keypoints are normalized → convert to display pixels (before CSS mirror)
+  const lx = kp[0].x * vW * scale - cropX;
+  const rx = kp[1].x * vW * scale - cropX;
+  const ly = kp[0].y * vH * scale - cropY;
+  const ry = kp[1].y * vH * scale - cropY;
 
-  // Center X (mirrored), eye-level Y (~30% from top of face box)
-  const centerX = cW - (faceLeft + faceW / 2); // mirror
-  const glassY  = faceTop + faceH * 0.30;
-  const glassW  = faceW * 1.1;
+  // Mirror X (CSS scaleX(-1) on video)
+  const lxM = cW - lx;
+  const rxM = cW - rx;
+
+  const centerX = (lxM + rxM) / 2;
+  const centerY = (ly + ry) / 2;
+  const eyeSpanPx = Math.abs(lxM - rxM);
+  const glassW = eyeSpanPx * 2.4; // glasses ~2.4x the inter-eye distance
 
   return {
     position: 'absolute',
     left: `${(centerX / cW) * 100}%`,
-    top:  `${(glassY  / cH) * 100}%`,
+    top:  `${(centerY / cH) * 100}%`,
     width:`${(glassW  / cW) * 100}%`,
     transform: 'translateX(-50%)',
     mixBlendMode: 'multiply',
@@ -134,7 +139,7 @@ export default function ARViewer({ product, onClose }) {
             src={product?.img} alt="" draggable={false}
             style={
               hasFaces && videoDims.w > 0
-                ? glassesStyle(faces[0]?.boundingBox, videoDims.w, videoDims.h, containerRef.current?.offsetWidth, containerRef.current?.offsetHeight)
+                ? glassesStyle(faces[0], videoDims.w, videoDims.h, containerRef.current?.offsetWidth, containerRef.current?.offsetHeight)
                 : { position: 'absolute', left: `${pos.x}%`, top: `${pos.y}%`,
                     width: `${70 * scale}%`, transform: 'translateX(-50%)',
                     mixBlendMode: 'multiply', pointerEvents: 'none', userSelect: 'none' }

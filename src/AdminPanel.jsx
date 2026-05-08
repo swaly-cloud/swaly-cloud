@@ -143,6 +143,21 @@ function ProductForm({ product, onSave, onCancel }) {
             {input('PRIX (TND)', 'price', 'number', { min:1 })}
             {input('URL IMAGE', 'img')}
             {form.img && <img src={form.img} alt="preview" className="w-full h-32 object-contain" style={{ background:C.bgSoft }}/>}
+            {form.imgs && form.imgs.length > 1 && (
+              <div>
+                <div className="text-[10px] tracking-[0.2em] font-semibold mb-1.5" style={{ color:C.mute }}>TOUTES LES IMAGES ({form.imgs.length})</div>
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {form.imgs.map((src, i) => (
+                    <button key={i} type="button" onClick={() => f('img', src)}
+                      className="flex-shrink-0 w-20 h-20 relative"
+                      style={{ background:C.bgSoft, border:`2px solid ${src === form.img ? C.gold : C.line}` }}>
+                      <img src={src} alt="" className="w-full h-full object-contain" style={{ padding:'6%' }}/>
+                    </button>
+                  ))}
+                </div>
+                <div className="text-[10px] mt-1" style={{ color:C.mute }}>Appuie sur une image pour la définir comme principale</div>
+              </div>
+            )}
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={!!form.is_new} onChange={e=>f('is_new',e.target.checked)} className="w-4 h-4"/>
               <span className="text-[12px]" style={{ color:C.ink }}>Marquer comme NOUVEAU</span>

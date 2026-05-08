@@ -4,13 +4,17 @@ import { useARCamera } from '../hooks/useARCamera';
 
 const C = { ink: '#0A0A0A', gold: '#D4AF37' };
 
-// Compute CSS position from MediaPipe bounding box (normalized 0-1)
-function glassesStyle(bb) {
-  if (!bb) return null;
-  // Video is mirrored via scaleX(-1) so flip X
-  const centerX = (1 - bb.originX - bb.width / 2) * 100;
-  const topY = (bb.originY + bb.height * 0.22) * 100;
-  const widthPct = bb.width * 115;
+// bb coords from MediaPipe are in pixels — normalize by video size
+function glassesStyle(bb, vW, vH) {
+  if (!bb || !vW || !vH) return null;
+  const nx = bb.originX / vW;
+  const ny = bb.originY / vH;
+  const nw = bb.width / vW;
+  const nh = bb.height / vH;
+  // mirror X (video is scaleX(-1))
+  const centerX = (1 - nx - nw / 2) * 100;
+  const topY    = (ny + nh * 0.22) * 100;
+  const widthPct = nw * 115;
   return {
     position: 'absolute',
     left: `${centerX}%`,
@@ -31,10 +35,20 @@ export default function ARViewer({ product, onClose }) {
   const [started, setStarted] = useState(false);
   const [pos, setPos] = useState({ x: 50, y: 38 });
   const [scale, setScale] = useState(1.0);
+  const [videoDims, setVideoDims] = useState({ w: 0, h: 0 });
 
   const hasFaces = faces.length > 0;
   const isLive = phase === 'live';
-  const isLoading = phase === 'camera' || phase === 'ai';
+
+  // Track video native dimensions for coordinate normalization
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    const onMeta = () => setVideoDims({ w: video.videoWidth, h: video.videoHeight });
+    video.addEventListener('loadedmetadata', onMeta);
+    if (video.videoWidth) onMeta();
+    return () => video.removeEventListener('loadedmetadata', onMeta);
+  }, [videoRef]);
 
 
   const handleStart = useCallback(() => {
@@ -106,11 +120,12 @@ export default function ARViewer({ product, onClose }) {
         {isLive && (
           <img
             src={product?.img} alt="" draggable={false}
-            style={hasFaces
-              ? glassesStyle(faces[0]?.boundingBox)
-              : { position: 'absolute', left: `${pos.x}%`, top: `${pos.y}%`,
-                  width: `${70 * scale}%`, transform: 'translateX(-50%)',
-                  mixBlendMode: 'multiply', pointerEvents: 'none', userSelect: 'none' }
+            style={
+              hasFaces && videoDims.w > 0
+                ? glassesStyle(faces[0]?.boundingBox, videoDims.w, videoDims.h)
+                : { position: 'absolute', left: `${pos.x}%`, top: `${pos.y}%`,
+                    width: `${70 * scale}%`, transform: 'translateX(-50%)',
+                    mixBlendMode: 'multiply', pointerEvents: 'none', userSelect: 'none' }
             }
           />
         )}

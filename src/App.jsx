@@ -73,22 +73,22 @@ return c === 'TND' ? `${v.toLocaleString('fr-FR')} ${SYM[c]}` : `${SYM[c]}${v.to
 
 const UNS = seed => `https://picsum.photos/seed/${seed}/400/500`;
 const PRODUCTS = [
-{ id:1, brand:'FENDI', name:'FE40140U Acétate', cat:'soleil', genre:'femme', price:1790, hue:['#0F0F0F','#2C2C2C'], accent:'#D4AF37', new:true, img:'https://pretavoir.us/cdn/shop/files/fendi-ff-diamonds-fe40140u-56n-hd-1_800x.jpg?v=1740410082' },
-{ id:2, brand:'TOM FORD', name:'Wyatt Tortue Havane', cat:'soleil', genre:'homme', price:1650, hue:['#3D2817','#6B4423'], accent:'#F5D547', new:false, img:'https://pretavoir.us/cdn/shop/products/tom-ford-wyatt-tf871-52f-hd-3_800x.jpg?v=1622128254' },
-{ id:3, brand:'CELINE', name:'Triomphe CL40282U', cat:'soleil', genre:'femme', price:1890, hue:['#1A1A1A','#0F0F0F'], accent:'#D4AF37', new:true, img:'https://pretavoir.co.uk/cdn/shop/files/celine-cl40282u-01a-hd-2_800x.jpg?v=1709739547' },
-{ id:4, brand:'PERSOL', name:'649 Original Havana', cat:'soleil', genre:'homme', price:1290, hue:['#5C3A1E','#8B5A2B'], accent:'#F5D547', new:false, img:'https://pretavoir.co.uk/cdn/shop/products/persol-0649-24-31-hd-3_800x.jpg?v=1611918887' },
-{ id:5, brand:'RAY-BAN', name:'Wayfarer RB2140', cat:'soleil', genre:'unisexe', price:690, hue:['#0A0A0A','#2A2A2A'], accent:'#D4AF37', new:false, img:'https://pretavoir.co.uk/cdn/shop/products/ray-ban-2140-901-hd-2_1024x.jpg?v=1611919254' },
-{ id:6, brand:'JOW&BRO', name:'DJ9082 Vintage Écaille', cat:'vue', genre:'homme', price:390, hue:['#7A4A2A','#A36B3F'], accent:'#F5D547', new:false, img:UNS('jow-bro-vintage') },
-{ id:7, brand:'DIOR', name:'DiorSignature S11I', cat:'soleil', genre:'femme', price:1990, hue:['#1A1A1A','#0A0A0A'], accent:'#D4AF37', new:true, img:'https://pretavoir.us/cdn/shop/files/diorsignature-s11i-14a1-hd-3_800x.jpg?v=1720454479' },
-{ id:8, brand:'SILHOUETTE', name:'TMA Icon 5290', cat:'vue', genre:'homme', price:1390, hue:['#3D3D3D','#5C5C5C'], accent:'#F5D547', new:false, img:UNS('silhouette-titanium') },
-{ id:9, brand:'MIU MIU', name:'MU 04ZS Round', cat:'soleil', genre:'femme', price:1490, hue:['#0A0A0A','#1A1A1A'], accent:'#D4AF37', new:true, img:'https://pretavoir.us/cdn/shop/files/miu-miu-mu-04zs-1ab5s0-hd-3_800x.jpg?v=1707743749' },
-{ id:10, brand:'VAKAY', name:'Breeze Bois & Acétate', cat:'vue', genre:'unisexe', price:1490, hue:['#3D2817','#5C3A1E'], accent:'#F5D547', new:false, img:UNS('vakay-wood') },
-{ id:11, brand:'BELLA', name:'Radiant Hazelnut', cat:'lentilles', genre:'femme', price:140, hue:['#8B6F47','#A88860'], accent:'#F5D547', new:false, img:UNS('bella-contact') },
-{ id:12, brand:'CARRERA', name:'8867 Pilote Métal', cat:'vue', genre:'homme', price:590, hue:['#1F1F1F','#373737'], accent:'#D4AF37', new:false, img:UNS('carrera-metal') },
-{ id:13, brand:'PRADA', name:'PR 17WS Marble Black', cat:'soleil', genre:'femme', price:1750, hue:['#2A1A0A','#5C3A1E'], accent:'#D4AF37', new:true, img:'https://pretavoir.co.uk/cdn/shop/products/prada-pr-17ws-11n09t-hd-3_800x.jpg?v=1686582774' },
-{ id:14, brand:'MARC JACOBS', name:'MJ1033S Bold', cat:'soleil', genre:'femme', price:950, hue:['#1A1A2A','#2A2A4A'], accent:'#F5D547', new:false, img:UNS('marc-jacobs-bold') },
-{ id:15, brand:'CARRERA', name:'Grand Prix 3 Femme', cat:'vue', genre:'femme', price:690, hue:['#2C1810','#5A3020'], accent:'#F5D547', new:false, img:UNS('carrera-femme') },
-{ id:16, brand:'RAY-BAN', name:'Aviator RB3025 Or', cat:'soleil', genre:'homme', price:750, hue:['#1A1410','#3A2E20'], accent:'#D4AF37', new:false, img:'https://pretavoir.us/cdn/shop/products/ray-ban-aviator-large-metal-rb-3025-0013m-hd-3_800x.jpg?v=1687521942' },
+{ id:1, brand:'FENDI', name:'FE40140U Acétate', cat:'soleil', genre:'femme', price:1790, hue:['#0F0F0F','#2C2C2C'], accent:'#D4AF37', new:true, img:'https://pretavoir.us/cdn/shop/files/fendi-ff-diamonds-fe40140u-56n-hd-1_800x.jpg?v=1740410082', desc:'Monture acétate oversize au style iconique FF. Verres fumés gradient, protection UV400. Finitions dorées signature Fendi.' },
+{ id:2, brand:'TOM FORD', name:'Wyatt Tortue Havane', cat:'soleil', genre:'homme', price:1650, hue:['#3D2817','#6B4423'], accent:'#F5D547', new:false, img:'https://pretavoir.us/cdn/shop/products/tom-ford-wyatt-tf871-52f-hd-3_800x.jpg?v=1622128254', desc:'Lunette pilote en acétate écaille havane. Verres marron dégradé, logo T doré sur les branches. Élégance masculin intemporelle.' },
+{ id:3, brand:'CELINE', name:'Triomphe CL40282U', cat:'soleil', genre:'femme', price:1890, hue:['#1A1A1A','#0F0F0F'], accent:'#D4AF37', new:true, img:'https://pretavoir.co.uk/cdn/shop/files/celine-cl40282u-01a-hd-2_800x.jpg?v=1709739547', desc:'Forme rectangulaire sculptée en acétate noir. Verres gris, logo Triomphe gravé sur chaque branche. Pièce maîtresse de la maison Celine.' },
+{ id:4, brand:'PERSOL', name:'649 Original Havana', cat:'soleil', genre:'homme', price:1290, hue:['#5C3A1E','#8B5A2B'], accent:'#F5D547', new:false, img:'https://pretavoir.co.uk/cdn/shop/products/persol-0649-24-31-hd-3_800x.jpg?v=1611918887', desc:'Modèle iconique né en 1957, inspiré des conducteurs de tramway turinois. Acétate havane, verres cristal brun. Un classique indémodable.' },
+{ id:5, brand:'RAY-BAN', name:'Wayfarer RB2140', cat:'soleil', genre:'unisexe', price:690, hue:['#0A0A0A','#2A2A2A'], accent:'#D4AF37', new:false, img:'https://pretavoir.co.uk/cdn/shop/products/ray-ban-2140-901-hd-2_1024x.jpg?v=1611919254', desc:'Le Wayfarer original depuis 1956. Acétate noir mat, verres G-15 verts. Porté par les plus grandes icônes culturelles du XXe siècle.' },
+{ id:6, brand:'JOW&BRO', name:'DJ9082 Vintage Écaille', cat:'vue', genre:'homme', price:390, hue:['#7A4A2A','#A36B3F'], accent:'#F5D547', new:false, img:UNS('jow-bro-vintage'), desc:'Monture optique en acétate écaille vintage. Design rétro années 70, légèreté remarquable. Idéale pour correction et style au quotidien.' },
+{ id:7, brand:'DIOR', name:'DiorSignature S11I', cat:'soleil', genre:'femme', price:1990, hue:['#1A1A1A','#0A0A0A'], accent:'#D4AF37', new:true, img:'https://pretavoir.us/cdn/shop/files/diorsignature-s11i-14a1-hd-3_800x.jpg?v=1720454479', desc:'Silhouette géométrique audacieuse signée Dior. Monture métal noire, verres fumés miroir. L\'audace couture portée au visage.' },
+{ id:8, brand:'SILHOUETTE', name:'TMA Icon 5290', cat:'vue', genre:'homme', price:1390, hue:['#3D3D3D','#5C5C5C'], accent:'#F5D547', new:false, img:UNS('silhouette-titanium'), desc:'Monture titane ultra-légère (1,8g) sans vis ni charnières. Design autrichien primé, confort exceptionnel toute la journée.' },
+{ id:9, brand:'MIU MIU', name:'MU 04ZS Round', cat:'soleil', genre:'femme', price:1490, hue:['#0A0A0A','#1A1A1A'], accent:'#D4AF37', new:true, img:'https://pretavoir.us/cdn/shop/files/miu-miu-mu-04zs-1ab5s0-hd-3_800x.jpg?v=1707743749', desc:'Lunette ronde oversize en acétate noir brillant. Verres gris dégradé, ornements cristaux sur les branches. Sophistication Miu Miu.' },
+{ id:10, brand:'VAKAY', name:'Breeze Bois & Acétate', cat:'vue', genre:'unisexe', price:1490, hue:['#3D2817','#5C3A1E'], accent:'#F5D547', new:false, img:UNS('vakay-wood'), desc:'Monture éco-responsable alliant bois naturel et acétate. Chaque paire est unique. Fabrication artisanale, matériaux durables.' },
+{ id:11, brand:'BELLA', name:'Radiant Hazelnut', cat:'lentilles', genre:'femme', price:140, hue:['#8B6F47','#A88860'], accent:'#F5D547', new:false, img:UNS('bella-contact'), desc:'Lentilles de couleur noisette naturel, port mensuel. Formule hydratante 38% eau. Donne un regard intense et authentique.' },
+{ id:12, brand:'CARRERA', name:'8867 Pilote Métal', cat:'vue', genre:'homme', price:590, hue:['#1F1F1F','#373737'], accent:'#D4AF37', new:false, img:UNS('carrera-metal'), desc:'Monture pilote en métal brossé gunmetal. Légèreté et robustesse, nez ajustable. Style sport-luxe pour homme actif.' },
+{ id:13, brand:'PRADA', name:'PR 17WS Marble Black', cat:'soleil', genre:'femme', price:1750, hue:['#2A1A0A','#5C3A1E'], accent:'#D4AF37', new:true, img:'https://pretavoir.co.uk/cdn/shop/products/prada-pr-17ws-11n09t-hd-3_800x.jpg?v=1686582774', desc:'Monture cat-eye en acétate effet marbre noir. Verres gris foncé, logo triangulaire Prada doré. Féminité architecturale.' },
+{ id:14, brand:'MARC JACOBS', name:'MJ1033S Bold', cat:'soleil', genre:'femme', price:950, hue:['#1A1A2A','#2A2A4A'], accent:'#F5D547', new:false, img:UNS('marc-jacobs-bold'), desc:'Monture audacieuse oversize en acétate bleu nuit. Verres miroir argenté, lignes graphiques contemporaines. Pour oser la différence.' },
+{ id:15, brand:'CARRERA', name:'Grand Prix 3 Femme', cat:'vue', genre:'femme', price:690, hue:['#2C1810','#5A3020'], accent:'#F5D547', new:false, img:UNS('carrera-femme'), desc:'Monture optique fine en métal rosé. Inspirée du sport automobile, design épuré et féminin. Légèreté et élégance au quotidien.' },
+{ id:16, brand:'RAY-BAN', name:'Aviator RB3025 Or', cat:'soleil', genre:'homme', price:750, hue:['#1A1410','#3A2E20'], accent:'#D4AF37', new:false, img:'https://pretavoir.us/cdn/shop/products/ray-ban-aviator-large-metal-rb-3025-0013m-hd-3_800x.jpg?v=1687521942', desc:'L\'aviateur original depuis 1937, né pour les pilotes de l\'US Air Force. Métal doré, verres G-15 verts. Icône universelle.' },
 ];
 
 const BOUTIQUES = [
@@ -783,12 +783,13 @@ return (
 </div>
 </div>
 {selectedProduct && (
-<div className="fixed inset-0 z-50 overflow-y-auto" style={{ background:C.bg }}>
-<div className="aspect-square relative" style={{ background:C.bgSoft }}>
-<img src={selectedProduct.img} alt={`${selectedProduct.brand}`} className="absolute inset-0 w-full h-full object-contain" style={{ padding:'8%' }}/>
-<button onClick={()=>setSelectedProduct(null)} className="absolute top-5 left-5 w-10 h-10 rounded-full flex items-center justify-center z-10" style={{ background:'rgba(0,0,0,0.08)', backdropFilter:'blur(10px)', pointerEvents:'auto' }}>
+<div className="fixed inset-0 z-50" style={{ background:C.bg }}>
+<button onClick={()=>setSelectedProduct(null)} className="absolute w-10 h-10 rounded-full flex items-center justify-center z-10" style={{ top:'calc(max(20px, env(safe-area-inset-top)) + 8px)', left:'20px', background:'rgba(0,0,0,0.12)', backdropFilter:'blur(10px)' }}>
 <X size={18} style={{ color:C.ink }}/>
 </button>
+<div className="overflow-y-auto h-full">
+<div className="aspect-square relative" style={{ background:C.bgSoft }}>
+<img src={selectedProduct.img} alt={`${selectedProduct.brand}`} className="absolute inset-0 w-full h-full object-contain" style={{ padding:'8%' }}/>
 </div>
 <div className="px-5 pt-6 pb-32">
 <div className="text-[10px] tracking-[0.25em] font-semibold mb-2" style={{ color:C.mute }}>{selectedProduct.brand}</div>
@@ -802,6 +803,7 @@ return (
 <button onClick={()=>{addToCart(selectedProduct);setSelectedProduct(null);setCartOpen(true);}} className="w-full py-4 text-[11px] tracking-[0.22em] font-semibold flex items-center justify-center gap-2" style={{ background:C.ink, color:'#FFF' }}>
 <Plus size={15}/>AJOUTER AU PANIER
 </button>
+</div>
 </div>
 </div>
 )}

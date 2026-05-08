@@ -165,7 +165,7 @@ function ProductForm({ product, onSave, onCancel }) {
 }
 
 // ─── MAIN ADMIN PANEL ──────────────────────────────────────────────
-export default function AdminPanel({ onClose }) {
+export default function AdminPanel({ onClose, onSync }) {
   const [admin, setAdmin]             = useState(null);
   const [section, setSection]         = useState('dashboard');
   const [dashboard, setDashboard]     = useState(null);
@@ -204,6 +204,7 @@ export default function AdminPanel({ onClose }) {
       const r = await api.admin.sync.woocommerce();
       setSyncMsg(`✅ ${r.added} ajoutés, ${r.updated} mis à jour (${r.total} produits WC)`);
       if (section === 'products') loadSection('products');
+      if (onSync) onSync();
     } catch (err) { setSyncMsg(`❌ ${err.message}`); }
   };
 

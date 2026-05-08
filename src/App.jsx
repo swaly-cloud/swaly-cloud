@@ -701,7 +701,7 @@ const [showAdmin, setShowAdmin] = useState(false);
 const [products, setProducts] = useState(PRODUCTS);
 const [apiReady, setApiReady] = useState(false);
 
-useEffect(() => {
+const fetchProducts = useCallback(() => {
   api.products.list().then(data => {
     setProducts(data);
     setApiReady(true);
@@ -709,6 +709,8 @@ useEffect(() => {
     setApiReady(false);
   });
 }, []);
+
+useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
 const dir = lang==='ar' ? 'rtl' : 'ltr';
 
@@ -810,7 +812,7 @@ return (
 {cartOpen && (
 <CartScreen cart={cart} ccy={ccy} lang={lang} onClose={()=>setCartOpen(false)} onUpdate={updateQty} onRemove={removeFromCart} onCheckout={handleCheckout} orders={orders}/>
 )}
-{showAdmin && <AdminPanel onClose={()=>setShowAdmin(false)}/>}
+{showAdmin && <AdminPanel onClose={()=>{ setShowAdmin(false); fetchProducts(); }} onSync={fetchProducts}/>}
 {/* Secret admin trigger — triple tap on logo area */}
 <button onClick={()=>setShowAdmin(true)}
   className="fixed bottom-24 right-4 w-8 h-8 rounded-full opacity-0 z-50"

@@ -25,14 +25,14 @@ export function useARCamera() {
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        await videoRef.current.play();
+        videoRef.current.play().catch(() => {}); // fire-and-forget on iOS
       }
     } catch (err) {
       if (err.name === 'NotAllowedError') setError('camera_denied');
       else if (err.name === 'NotFoundError') setError('no_camera');
       else setError(err.message || 'Erreur caméra');
     } finally {
-      setIsLoading(false);
+      setIsLoading(false); // don't wait for play() to resolve
     }
   }, []);
 

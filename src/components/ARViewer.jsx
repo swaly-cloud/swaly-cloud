@@ -41,54 +41,14 @@ function glassesStyle(detection, vW, vH, cW, cH) {
   };
 }
 
-// ARM = fraction of the image width occupied by each temple arm (left & right)
-const ARM = 0.22;
-const CTR = 1 - 2 * ARM; // center (lenses) fraction = 0.56
-
-// Renders glasses in 3 parts so the temples appear to angle back toward the ears in 3D.
+// Renders glasses with arms faded out via a side gradient mask.
 function GlassesOverlay({ src, style }) {
-  const [ar, setAr] = useState(3); // aspect-ratio, loaded from image
-
-  useEffect(() => {
-    if (!src) return;
-    const img = new Image();
-    img.onload = () => { if (img.naturalWidth) setAr(img.naturalWidth / img.naturalHeight); };
-    img.src = src;
-  }, [src]);
-
-  const sec = { position: 'absolute', top: 0, height: '100%', overflow: 'hidden' };
-  const imgBase = { height: '100%', display: 'block', maxWidth: 'none', pointerEvents: 'none', userSelect: 'none' };
-
   return (
-    <div style={{ ...style, aspectRatio: ar }}>
-      {/* Left arm — rotates away from viewer toward left ear */}
-      <div style={{ ...sec, left: 0, width: `${ARM * 100}%` }}>
-        <img src={src} alt="" draggable={false} style={{
-          ...imgBase,
-          width: `${100 / ARM}%`,
-          transformOrigin: 'right center',
-          transform: 'perspective(150px) rotateY(50deg)',
-        }} />
-      </div>
-      {/* Center frame — flat, faces camera */}
-      <div style={{ ...sec, left: `${ARM * 100}%`, width: `${CTR * 100}%` }}>
-        <img src={src} alt="" draggable={false} style={{
-          ...imgBase,
-          width: `${100 / CTR}%`,
-          marginLeft: `${-(ARM / CTR) * 100}%`,
-        }} />
-      </div>
-      {/* Right arm — rotates away from viewer toward right ear */}
-      <div style={{ ...sec, right: 0, width: `${ARM * 100}%` }}>
-        <img src={src} alt="" draggable={false} style={{
-          ...imgBase,
-          width: `${100 / ARM}%`,
-          marginLeft: `-${((ARM + CTR) / ARM) * 100}%`,
-          transformOrigin: 'left center',
-          transform: 'perspective(150px) rotateY(-50deg)',
-        }} />
-      </div>
-    </div>
+    <img src={src} alt="" draggable={false} style={{
+      ...style,
+      WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 22%, black 78%, transparent 100%)',
+      maskImage: 'linear-gradient(to right, transparent 0%, black 22%, black 78%, transparent 100%)',
+    }} />
   );
 }
 

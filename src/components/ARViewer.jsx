@@ -64,17 +64,26 @@ export default function ARViewer({ product, onClose }) {
     return () => { video.removeEventListener('loadedmetadata', sync); video.removeEventListener('resize', sync); };
   }, [videoRef]);
 
-  // Canvas draw loop (face detection mode)
+  // Canvas draw loop — always runs when live, syncs size if needed
   useEffect(() => {
-    if (!hasFaces) return;
+    if (!isLive) return;
     let raf;
     const loop = () => {
-      drawGlasses(canvasRef.current, videoRef.current, faces, glassesImgRef.current);
+      const canvas = canvasRef.current;
+      const video = videoRef.current;
+      if (canvas && video && video.videoWidth > 0) {
+        // Sync size if not set yet
+        if (canvas.width !== video.videoWidth) {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+        }
+        drawGlasses(canvas, video, faces, glassesImgRef.current);
+      }
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [faces, videoRef]);
+  }, [faces, isLive, videoRef]);
 
   const handleStart = useCallback(() => {
     setStarted(true);
@@ -141,11 +150,10 @@ export default function ARViewer({ product, onClose }) {
                style={{ transform: 'scaleX(-1)', display: isLive ? 'block' : 'none' }}
                playsInline muted autoPlay />
 
-        {/* Canvas overlay — glasses drawn via face detection */}
-        {isLive && hasFaces && (
-          <canvas ref={canvasRef}
-                  className="absolute inset-0 w-full h-full object-cover pointer-events-none" />
-        )}
+        {/* Canvas overlay — always mounted so dimensions are set on loadedmetadata */}
+        <canvas ref={canvasRef}
+                className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                style={{ display: isLive && hasFaces ? 'block' : 'none' }} />
 
         {/* CSS overlay — drag/pinch when no face detected */}
         {isLive && !hasFaces && (

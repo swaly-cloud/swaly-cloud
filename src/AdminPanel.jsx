@@ -225,8 +225,12 @@ export default function AdminPanel({ onClose, onSync }) {
 
   const deleteProduct = async (id) => {
     if (!confirm('Supprimer ce produit ?')) return;
-    await api.admin.products.delete(id);
-    setProducts(p => p.filter(x => x.id !== id));
+    try {
+      await api.admin.products.delete(id);
+      await loadSection('products');
+    } catch (err) {
+      alert('Erreur suppression : ' + err.message);
+    }
   };
 
   const setOrderStatus = async (ref, status) => {

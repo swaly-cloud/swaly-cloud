@@ -10,85 +10,124 @@ const router = express.Router();
 router.use(authMiddleware);
 
 // ─── DASHBOARD ─────────────────────────────────────────────────────
-router.get('/dashboard', (req, res) => {
-  const db = readDB();
-  res.json({
-    products:     db.products.length,
-    orders:       db.orders.length,
-    appointments: db.appointments.length,
-    revenue:      db.orders.filter(o => o.status !== 'annulé').reduce((s, o) => s + (o.total || 0), 0),
-    pendingOrders: db.orders.filter(o => o.status === 'confirmé').length,
-  });
+router.get('/dashboard', async (req, res) => {
+  try {
+    const db = await readDB();
+    res.json({
+      products:     db.products.length,
+      orders:       db.orders.length,
+      appointments: db.appointments.length,
+      revenue:      db.orders.filter(o => o.status !== 'annulé').reduce((s, o) => s + (o.total || 0), 0),
+      pendingOrders: db.orders.filter(o => o.status === 'confirmé').length,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ─── PRODUCTS CRUD ─────────────────────────────────────────────────
-router.get('/products', (req, res) => {
-  res.json(readDB().products);
-});
-
-router.post('/products', (req, res) => {
-  const { brand, name, cat, genre, price, img, accent, is_new } = req.body;
-  if (!brand || !name || !cat || !genre || !price) {
-    return res.status(400).json({ error: 'Champs obligatoires manquants' });
+router.get('/products', async (req, res) => {
+  try {
+    const db = await readDB();
+    res.json(db.products);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-  const db = readDB();
-  const maxId = db.products.reduce((m, p) => Math.max(m, p.id), 0);
-  const product = { id: maxId + 1, brand, name, cat, genre, price: Number(price), img: img || '', accent: accent || '#D4AF37', is_new: !!is_new };
-  db.products.push(product);
-  writeDB(db);
-  res.status(201).json(product);
 });
 
-router.put('/products/:id', (req, res) => {
-  const db = readDB();
-  const idx = db.products.findIndex(p => p.id === Number(req.params.id));
-  if (idx === -1) return res.status(404).json({ error: 'Produit introuvable' });
-  db.products[idx] = { ...db.products[idx], ...req.body, id: db.products[idx].id };
-  writeDB(db);
-  res.json(db.products[idx]);
+router.post('/products', async (req, res) => {
+  try {
+    const { brand, name, cat, genre, price, img, accent, is_new } = req.body;
+    if (!brand || !name || !cat || !genre || !price) {
+      return res.status(400).json({ error: 'Champs obligatoires manquants' });
+    }
+    const db = await readDB();
+    const maxId = db.products.reduce((m, p) => Math.max(m, p.id), 0);
+    const product = { id: maxId + 1, brand, name, cat, genre, price: Number(price), img: img || '', accent: accent || '#D4AF37', is_new: !!is_new };
+    db.products.push(product);
+    await writeDB(db);
+    res.status(201).json(product);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-router.delete('/products/:id', (req, res) => {
-  const db = readDB();
-  const idx = db.products.findIndex(p => p.id === Number(req.params.id));
-  if (idx === -1) return res.status(404).json({ error: 'Produit introuvable' });
-  db.products.splice(idx, 1);
-  writeDB(db);
-  res.json({ success: true });
+router.put('/products/:id', async (req, res) => {
+  try {
+    const db = await readDB();
+    const idx = db.products.findIndex(p => p.id === Number(req.params.id));
+    if (idx === -1) return res.status(404).json({ error: 'Produit introuvable' });
+    db.products[idx] = { ...db.products[idx], ...req.body, id: db.products[idx].id };
+    await writeDB(db);
+    res.json(db.products[idx]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete('/products/:id', async (req, res) => {
+  try {
+    const db = await readDB();
+    const idx = db.products.findIndex(p => p.id === Number(req.params.id));
+    if (idx === -1) return res.status(404).json({ error: 'Produit introuvable' });
+    db.products.splice(idx, 1);
+    await writeDB(db);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ─── ORDERS MANAGEMENT ─────────────────────────────────────────────
-router.get('/orders', (req, res) => {
-  res.json(readDB().orders);
+router.get('/orders', async (req, res) => {
+  try {
+    const db = await readDB();
+    res.json(db.orders);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-router.patch('/orders/:ref/status', (req, res) => {
-  const { status } = req.body;
-  const valid = ['confirmé', 'en préparation', 'livré', 'annulé'];
-  if (!valid.includes(status)) return res.status(400).json({ error: 'Statut invalide' });
-  const db = readDB();
-  const order = db.orders.find(o => o.ref === req.params.ref);
-  if (!order) return res.status(404).json({ error: 'Commande introuvable' });
-  order.status = status;
-  writeDB(db);
-  res.json(order);
+router.patch('/orders/:ref/status', async (req, res) => {
+  try {
+    const { status } = req.body;
+    const valid = ['confirmé', 'en préparation', 'livré', 'annulé'];
+    if (!valid.includes(status)) return res.status(400).json({ error: 'Statut invalide' });
+    const db = await readDB();
+    const order = db.orders.find(o => o.ref === req.params.ref);
+    if (!order) return res.status(404).json({ error: 'Commande introuvable' });
+    order.status = status;
+    await writeDB(db);
+    res.json(order);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ─── APPOINTMENTS MANAGEMENT ───────────────────────────────────────
-router.get('/appointments', (req, res) => {
-  res.json(readDB().appointments);
+router.get('/appointments', async (req, res) => {
+  try {
+    const db = await readDB();
+    res.json(db.appointments);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-router.patch('/appointments/:ref/status', (req, res) => {
-  const { status } = req.body;
-  const valid = ['confirmé', 'annulé', 'terminé'];
-  if (!valid.includes(status)) return res.status(400).json({ error: 'Statut invalide' });
-  const db = readDB();
-  const appt = db.appointments.find(a => a.ref === req.params.ref);
-  if (!appt) return res.status(404).json({ error: 'Rendez-vous introuvable' });
-  appt.status = status;
-  writeDB(db);
-  res.json(appt);
+router.patch('/appointments/:ref/status', async (req, res) => {
+  try {
+    const { status } = req.body;
+    const valid = ['confirmé', 'annulé', 'terminé'];
+    if (!valid.includes(status)) return res.status(400).json({ error: 'Statut invalide' });
+    const db = await readDB();
+    const appt = db.appointments.find(a => a.ref === req.params.ref);
+    if (!appt) return res.status(404).json({ error: 'Rendez-vous introuvable' });
+    appt.status = status;
+    await writeDB(db);
+    res.json(appt);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ─── WOOCOMMERCE SYNC ──────────────────────────────────────────────
@@ -123,7 +162,7 @@ router.post('/sync/woocommerce', async (req, res) => {
       return res.status(502).json({ error: 'Réponse WooCommerce invalide', detail: wcProducts });
     }
 
-    const db = readDB();
+    const db = await readDB();
     let added = 0, updated = 0;
 
     for (const wp of wcProducts) {
@@ -159,7 +198,7 @@ router.post('/sync/woocommerce', async (req, res) => {
       }
     }
 
-    writeDB(db);
+    await writeDB(db);
     res.json({ success: true, added, updated, total: wcProducts.length });
   } catch (err) {
     res.status(502).json({ error: `Erreur WooCommerce: ${err.message}` });

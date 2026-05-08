@@ -125,17 +125,19 @@ export default function ARViewer({ product, onClose }) {
         <canvas
           ref={canvasRef}
           className="absolute inset-0 w-full h-full object-cover"
-          style={{ transform: 'scaleX(-1)' }}
         />
 
         {/* Loading state */}
         {isLoading && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-8">
             <div
-              className="w-12 h-12 rounded-full border-2 border-t-transparent animate-spin"
-              style={{ borderColor: C.gold, borderTopColor: 'transparent' }}
+              className="w-12 h-12 rounded-full border-2 animate-spin"
+              style={{ borderColor: `${C.gold}40`, borderTopColor: C.gold }}
             />
-            <div className="text-[13px] text-white opacity-70">Initialisation caméra…</div>
+            <div className="text-center">
+              <div className="text-[14px] text-white font-semibold mb-1">Chargement IA…</div>
+              <div className="text-[12px] text-white opacity-50">Premier lancement : ~10 secondes</div>
+            </div>
           </div>
         )}
 

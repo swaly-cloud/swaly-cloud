@@ -1,13 +1,31 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
-import { FaceDetector, FilesetResolver } from '@mediapipe/tasks-vision';
+
+// Lazy-load MediaPipe only when needed
+async function loadFaceDetector() {
+  const { FaceDetector, FilesetResolver } = await import('@mediapipe/tasks-vision');
+  const vision = await FilesetResolver.forVisionTasks(
+    `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm`
+  );
+  const detector = await FaceDetector.createFromOptions(vision, {
+    baseOptions: {
+      modelAssetPath:
+        'https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite',
+      delegate: 'CPU',
+    },
+    runningMode: 'VIDEO',
+    minDetectionConfidence: 0.4,
+  });
+  return detector;
+}
 
 export function useARCamera() {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const detectorRef = useRef(null);
   const rafRef = useRef(null);
+  const lastTimeRef = useRef(0);
 
-  const [isLoading, setIsLoading] = useState(true);
+  const [status, setStatus] = useState('idle'); // idle | loading | ready | error
   const [error, setError] = useState(null);
   const [faces, setFaces] = useState([]);
 
@@ -20,23 +38,12 @@ export function useARCamera() {
   }, []);
 
   const initCamera = useCallback(async () => {
-    setIsLoading(true);
+    setStatus('loading');
     setError(null);
-    try {
-      // Init MediaPipe FaceDetector
-      const vision = await FilesetResolver.forVisionTasks(
-        'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
-      );
-      detectorRef.current = await FaceDetector.createFromOptions(vision, {
-        baseOptions: {
-          modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite',
-          delegate: 'GPU',
-        },
-        runningMode: 'VIDEO',
-        minDetectionConfidence: 0.5,
-      });
+    setFaces([]);
 
-      // Request camera
+    try {
+      // Request camera first (fast feedback)
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
         audio: false,
@@ -45,42 +52,48 @@ export function useARCamera() {
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        await videoRef.current.play();
+        videoRef.current.play().catch(() => {});
       }
 
-      setIsLoading(false);
+      // Load MediaPipe in parallel (can take a few seconds on first load)
+      detectorRef.current = await loadFaceDetector();
 
-      // Detection loop
+      setStatus('ready');
+
+      // Detection loop — throttled to ~20fps for battery
       const detect = () => {
-        if (!videoRef.current || !detectorRef.current || videoRef.current.readyState < 2) {
+        const video = videoRef.current;
+        const detector = detectorRef.current;
+        if (!video || !detector || video.readyState < 2) {
           rafRef.current = requestAnimationFrame(detect);
           return;
         }
-        try {
-          const result = detectorRef.current.detectForVideo(videoRef.current, performance.now());
-          setFaces(result.detections || []);
-        } catch {
-          // ignore individual frame errors
+        const now = performance.now();
+        if (now - lastTimeRef.current >= 50) {
+          lastTimeRef.current = now;
+          try {
+            const result = detector.detectForVideo(video, now);
+            setFaces(result.detections || []);
+          } catch {
+            // ignore per-frame errors
+          }
         }
         rafRef.current = requestAnimationFrame(detect);
       };
       rafRef.current = requestAnimationFrame(detect);
 
     } catch (err) {
-      if (err.name === 'NotAllowedError') {
-        setError('camera_denied');
-      } else if (err.name === 'NotFoundError') {
-        setError('no_camera');
-      } else {
-        setError(err.message);
-      }
-      setIsLoading(false);
+      stopCamera();
+      if (err.name === 'NotAllowedError') setError('camera_denied');
+      else if (err.name === 'NotFoundError') setError('no_camera');
+      else setError(err.message);
+      setStatus('error');
     }
-  }, []);
-
-  useEffect(() => {
-    return () => stopCamera();
   }, [stopCamera]);
+
+  useEffect(() => () => stopCamera(), [stopCamera]);
+
+  const isLoading = status === 'loading' || status === 'idle';
 
   return { videoRef, faces, isLoading, error, initCamera, stopCamera };
 }

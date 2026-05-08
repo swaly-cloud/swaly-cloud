@@ -178,7 +178,9 @@ router.post('/sync/woocommerce', async (req, res) => {
 
       const existing = db.products.find(p => p.wc_id === wp.id);
       if (existing) {
-        Object.assign(existing, { name: wp.name, price, img, imgs, description, is_new: wp.featured, wc_id: wp.id });
+        // Preserve manually-chosen primary image if it's still in the new imgs list
+        const keepImg = existing.img && imgs.includes(existing.img) ? existing.img : img;
+        Object.assign(existing, { name: wp.name, price, img: keepImg, imgs, description, is_new: wp.featured, wc_id: wp.id });
         updated++;
       } else {
         const maxId = db.products.reduce((m, p) => Math.max(m, p.id), 0);

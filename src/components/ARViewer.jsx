@@ -4,7 +4,7 @@ import { useARCamera } from '../hooks/useARCamera';
 
 const C = { ink: '#0A0A0A', gold: '#D4AF37' };
 
-// Convert MediaPipe pixel coords (in video space) to CSS % in the container,
+// Convert MediaPipe normalized coords (0-1) to CSS % in the container,
 // accounting for object-cover crop (video is scaled to fill container).
 function glassesStyle(bb, vW, vH, cW, cH) {
   if (!bb || !vW || !vH || !cW || !cH) return null;
@@ -16,11 +16,11 @@ function glassesStyle(bb, vW, vH, cW, cH) {
   const cropX = (dispW - cW) / 2;  // pixels cropped on each side
   const cropY = (dispH - cH) / 2;
 
-  // Convert bb from video-pixels → container-pixels
-  const faceLeft   = bb.originX * scale - cropX;
-  const faceTop    = bb.originY * scale - cropY;
-  const faceW      = bb.width   * scale;
-  const faceH      = bb.height  * scale;
+  // MediaPipe returns normalized coords (0-1), convert to video pixels then display pixels
+  const faceLeft   = bb.originX * vW * scale - cropX;
+  const faceTop    = bb.originY * vH * scale - cropY;
+  const faceW      = bb.width   * vW * scale;
+  const faceH      = bb.height  * vH * scale;
 
   // Center X (mirrored), eye-level Y (~30% from top of face box)
   const centerX = cW - (faceLeft + faceW / 2); // mirror

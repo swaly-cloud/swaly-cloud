@@ -4,32 +4,28 @@ import { useARCamera } from '../hooks/useARCamera';
 
 const C = { ink: '#0A0A0A', gold: '#D4AF37' };
 
-// Draw glasses onto canvas using face bounding box
-function drawGlasses(canvas, video, faces, img) {
-  if (!canvas || !video || canvas.width === 0) return;
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  if (!img || faces.length === 0) return;
-
-  for (const face of faces) {
-    const bb = face.boundingBox;
-    if (!bb) continue;
-    const W = canvas.width, H = canvas.height;
-    const x = bb.originX * W, y = bb.originY * H;
-    const w = bb.width * W, h = bb.height * H;
-    const gW = w * 1.15;
-    const gH = gW * (img.naturalHeight / img.naturalWidth);
-    const gX = W - (x + w / 2) - gW / 2; // mirrored
-    const gY = y + h * 0.22;
-    ctx.drawImage(img, gX, gY, gW, gH);
-  }
+// Compute CSS position from MediaPipe bounding box (normalized 0-1)
+function glassesStyle(bb) {
+  if (!bb) return null;
+  // Video is mirrored via scaleX(-1) so flip X
+  const centerX = (1 - bb.originX - bb.width / 2) * 100;
+  const topY = (bb.originY + bb.height * 0.22) * 100;
+  const widthPct = bb.width * 115;
+  return {
+    position: 'absolute',
+    left: `${centerX}%`,
+    top: `${topY}%`,
+    width: `${widthPct}%`,
+    transform: 'translateX(-50%)',
+    mixBlendMode: 'multiply',
+    pointerEvents: 'none',
+    userSelect: 'none',
+  };
 }
 
 export default function ARViewer({ product, onClose }) {
   const { videoRef, phase, error, faces, initCamera, stopCamera } = useARCamera();
-  const canvasRef = useRef(null);
   const containerRef = useRef(null);
-  const glassesImgRef = useRef(null);
   const dragRef = useRef(null);
   const pinchRef = useRef(null);
   const [started, setStarted] = useState(false);
@@ -40,50 +36,6 @@ export default function ARViewer({ product, onClose }) {
   const isLive = phase === 'live';
   const isLoading = phase === 'camera' || phase === 'ai';
 
-  // Preload glasses image
-  useEffect(() => {
-    if (!product?.img) return;
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.src = product.img;
-    img.onload = () => { glassesImgRef.current = img; };
-  }, [product?.img]);
-
-  // Sync canvas size on video ready
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    const sync = () => {
-      if (canvasRef.current) {
-        canvasRef.current.width = video.videoWidth || 640;
-        canvasRef.current.height = video.videoHeight || 480;
-      }
-    };
-    video.addEventListener('loadedmetadata', sync);
-    video.addEventListener('resize', sync);
-    return () => { video.removeEventListener('loadedmetadata', sync); video.removeEventListener('resize', sync); };
-  }, [videoRef]);
-
-  // Canvas draw loop — always runs when live, syncs size if needed
-  useEffect(() => {
-    if (!isLive) return;
-    let raf;
-    const loop = () => {
-      const canvas = canvasRef.current;
-      const video = videoRef.current;
-      if (canvas && video && video.videoWidth > 0) {
-        // Sync size if not set yet
-        if (canvas.width !== video.videoWidth) {
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-        }
-        drawGlasses(canvas, video, faces, glassesImgRef.current);
-      }
-      raf = requestAnimationFrame(loop);
-    };
-    raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
-  }, [faces, isLive, videoRef]);
 
   const handleStart = useCallback(() => {
     setStarted(true);
@@ -150,16 +102,17 @@ export default function ARViewer({ product, onClose }) {
                style={{ transform: 'scaleX(-1)', display: isLive ? 'block' : 'none' }}
                playsInline muted autoPlay />
 
-        {/* Canvas overlay — always mounted so dimensions are set on loadedmetadata */}
-        <canvas ref={canvasRef}
-                className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-                style={{ display: isLive && hasFaces ? 'block' : 'none' }} />
-
-        {/* CSS overlay — drag/pinch when no face detected */}
-        {isLive && !hasFaces && (
-          <img src={product?.img} alt="" draggable={false}
-               style={{ position: 'absolute', left: `${pos.x}%`, top: `${pos.y}%`, width: `${70 * scale}%`,
-                        transform: 'translateX(-50%)', mixBlendMode: 'multiply', pointerEvents: 'none' }} />
+        {/* Glasses — auto-positioned when face detected, manual drag/pinch otherwise */}
+        {isLive && (
+          <img
+            src={product?.img} alt="" draggable={false}
+            style={hasFaces
+              ? glassesStyle(faces[0]?.boundingBox)
+              : { position: 'absolute', left: `${pos.x}%`, top: `${pos.y}%`,
+                  width: `${70 * scale}%`, transform: 'translateX(-50%)',
+                  mixBlendMode: 'multiply', pointerEvents: 'none', userSelect: 'none' }
+            }
+          />
         )}
 
         {/* START */}

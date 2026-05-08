@@ -131,7 +131,7 @@ export default function ARViewer({ product, onClose }) {
         {/* Glasses — auto-positioned when face detected, manual drag/pinch otherwise */}
         {isLive && (
           <img
-            src={product?.imgs?.[0] || product?.img} alt="" draggable={false}
+            src={product?.img} alt="" draggable={false}
             style={
               hasFaces && videoDims.w > 0
                 ? glassesStyle(faces[0]?.boundingBox, videoDims.w, videoDims.h, containerRef.current?.offsetWidth, containerRef.current?.offsetHeight)
@@ -218,7 +218,7 @@ export default function ARViewer({ product, onClose }) {
 
       {/* Bottom bar */}
       <div className="flex-shrink-0 px-5 pt-3 pb-10 flex items-center gap-3" style={{ background: 'rgba(10,10,10,0.9)' }}>
-        <img src={product?.imgs?.[0] || product?.img} alt="" className="w-12 h-12 object-cover rounded flex-shrink-0" style={{ background: '#1A1A1A' }} />
+        <img src={product?.img} alt="" className="w-12 h-12 object-cover rounded flex-shrink-0" style={{ background: '#1A1A1A' }} />
         <div className="flex-1 min-w-0">
           <div className="text-[10px] tracking-[0.2em] font-semibold" style={{ color: C.gold }}>{product?.brand}</div>
           <div className="text-[13px] text-white truncate">{product?.name}</div>

@@ -4,22 +4,34 @@ import { useARCamera } from '../hooks/useARCamera';
 
 const C = { ink: '#0A0A0A', gold: '#D4AF37' };
 
-// bb coords from MediaPipe are in pixels — normalize by video size
-function glassesStyle(bb, vW, vH) {
-  if (!bb || !vW || !vH) return null;
-  const nx = bb.originX / vW;
-  const ny = bb.originY / vH;
-  const nw = bb.width / vW;
-  const nh = bb.height / vH;
-  // mirror X (video is scaleX(-1))
-  const centerX = (1 - nx - nw / 2) * 100;
-  const topY    = (ny + nh * 0.22) * 100;
-  const widthPct = nw * 115;
+// Convert MediaPipe pixel coords (in video space) to CSS % in the container,
+// accounting for object-cover crop (video is scaled to fill container).
+function glassesStyle(bb, vW, vH, cW, cH) {
+  if (!bb || !vW || !vH || !cW || !cH) return null;
+
+  // Scale factor: object-cover uses the larger ratio
+  const scale = Math.max(cW / vW, cH / vH);
+  const dispW = vW * scale;   // displayed video size (may exceed container)
+  const dispH = vH * scale;
+  const cropX = (dispW - cW) / 2;  // pixels cropped on each side
+  const cropY = (dispH - cH) / 2;
+
+  // Convert bb from video-pixels → container-pixels
+  const faceLeft   = bb.originX * scale - cropX;
+  const faceTop    = bb.originY * scale - cropY;
+  const faceW      = bb.width   * scale;
+  const faceH      = bb.height  * scale;
+
+  // Center X (mirrored), eye-level Y (~30% from top of face box)
+  const centerX = cW - (faceLeft + faceW / 2); // mirror
+  const glassY  = faceTop + faceH * 0.30;
+  const glassW  = faceW * 1.1;
+
   return {
     position: 'absolute',
-    left: `${centerX}%`,
-    top: `${topY}%`,
-    width: `${widthPct}%`,
+    left: `${(centerX / cW) * 100}%`,
+    top:  `${(glassY  / cH) * 100}%`,
+    width:`${(glassW  / cW) * 100}%`,
     transform: 'translateX(-50%)',
     mixBlendMode: 'multiply',
     pointerEvents: 'none',
@@ -122,7 +134,7 @@ export default function ARViewer({ product, onClose }) {
             src={product?.img} alt="" draggable={false}
             style={
               hasFaces && videoDims.w > 0
-                ? glassesStyle(faces[0]?.boundingBox, videoDims.w, videoDims.h)
+                ? glassesStyle(faces[0]?.boundingBox, videoDims.w, videoDims.h, containerRef.current?.offsetWidth, containerRef.current?.offsetHeight)
                 : { position: 'absolute', left: `${pos.x}%`, top: `${pos.y}%`,
                     width: `${70 * scale}%`, transform: 'translateX(-50%)',
                     mixBlendMode: 'multiply', pointerEvents: 'none', userSelect: 'none' }

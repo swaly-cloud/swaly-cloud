@@ -1,150 +1,128 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { X, Camera, RotateCcw } from 'lucide-react';
+import { useState, useCallback, useRef } from 'react';
+import { X, Camera, RotateCcw, Move } from 'lucide-react';
 import { useARCamera } from '../hooks/useARCamera';
 
-const C = {
-  ink: '#0A0A0A', gold: '#D4AF37', goldLight: '#F5D547',
-  bg: '#0A0A0A', error: '#C0392B',
-};
-
-// Draw only the glasses overlay on a transparent canvas
-function drawOverlay(canvas, video, faces, glassesImg) {
-  const ctx = canvas.getContext('2d');
-  const W = canvas.width;
-  const H = canvas.height;
-
-  ctx.clearRect(0, 0, W, H);
-
-  if (!glassesImg || faces.length === 0) return;
-
-  for (const face of faces) {
-    const bb = face.boundingBox;
-    if (!bb) continue;
-
-    const x = bb.originX * W;
-    const y = bb.originY * H;
-    const w = bb.width * W;
-
-    // Glasses width = face width, eye area = upper ~30% of face
-    const gW = w * 1.15;
-    const gH = gW * (glassesImg.naturalHeight / glassesImg.naturalWidth);
-    // Mirror X to match video element scaleX(-1)
-    const gX = W - (x + w / 2) - gW / 2;
-    const gY = y + bb.height * H * 0.22;
-
-    ctx.drawImage(glassesImg, gX, gY, gW, gH);
-  }
-}
+const C = { ink: '#0A0A0A', gold: '#D4AF37', goldLight: '#F5D547' };
 
 export default function ARViewer({ product, onClose }) {
-  const canvasRef = useRef(null);
-  const glassesImgRef = useRef(null);
+  const { videoRef, isLoading, error, initCamera, stopCamera } = useARCamera();
   const [started, setStarted] = useState(false);
-  const { videoRef, faces, isLoading, error, initCamera, stopCamera } = useARCamera();
+  const [pos, setPos] = useState({ x: 50, y: 38 }); // % of screen
+  const [scale, setScale] = useState(1.0);
+  const containerRef = useRef(null);
+  const dragRef = useRef(null); // { startX, startY, startPosX, startPosY }
+  const pinchRef = useRef(null); // { startDist, startScale }
 
-  // Preload glasses image
-  useEffect(() => {
-    if (!product?.img) return;
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.src = product.img;
-    img.onload = () => { glassesImgRef.current = img; };
-  }, [product?.img]);
-
-  // Camera starts only when user taps the button (iOS requires user gesture)
   const handleStart = useCallback(() => {
     setStarted(true);
     initCamera();
   }, [initCamera]);
-
-  // Sync canvas size once when video starts
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    const onResize = () => {
-      if (canvasRef.current) {
-        canvasRef.current.width = video.videoWidth || 640;
-        canvasRef.current.height = video.videoHeight || 480;
-      }
-    };
-    video.addEventListener('loadedmetadata', onResize);
-    video.addEventListener('resize', onResize);
-    return () => {
-      video.removeEventListener('loadedmetadata', onResize);
-      video.removeEventListener('resize', onResize);
-    };
-  }, [videoRef]);
-
-  // Draw glasses overlay each frame
-  useEffect(() => {
-    let raf;
-    const loop = () => {
-      const canvas = canvasRef.current;
-      const video = videoRef.current;
-      if (canvas && video && canvas.width > 0) {
-        drawOverlay(canvas, video, faces, glassesImgRef.current);
-      }
-      raf = requestAnimationFrame(loop);
-    };
-    raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
-  }, [faces, videoRef]);
 
   const handleClose = useCallback(() => {
     stopCamera();
     onClose();
   }, [stopCamera, onClose]);
 
+  // ── Touch handlers ──────────────────────────────────────────────
+  const onTouchStart = useCallback((e) => {
+    if (e.touches.length === 1) {
+      const t = e.touches[0];
+      dragRef.current = { startX: t.clientX, startY: t.clientY, startPosX: pos.x, startPosY: pos.y };
+      pinchRef.current = null;
+    } else if (e.touches.length === 2) {
+      dragRef.current = null;
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      pinchRef.current = { startDist: Math.hypot(dx, dy), startScale: scale };
+    }
+  }, [pos, scale]);
+
+  const onTouchMove = useCallback((e) => {
+    e.preventDefault();
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    if (e.touches.length === 1 && dragRef.current) {
+      const t = e.touches[0];
+      const dx = ((t.clientX - dragRef.current.startX) / rect.width) * 100;
+      const dy = ((t.clientY - dragRef.current.startY) / rect.height) * 100;
+      setPos({
+        x: Math.max(10, Math.min(90, dragRef.current.startPosX + dx)),
+        y: Math.max(5, Math.min(85, dragRef.current.startPosY + dy)),
+      });
+    } else if (e.touches.length === 2 && pinchRef.current) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.hypot(dx, dy);
+      const ratio = dist / pinchRef.current.startDist;
+      setScale(Math.max(0.4, Math.min(2.5, pinchRef.current.startScale * ratio)));
+    }
+  }, []);
+
+  const onTouchEnd = useCallback(() => {
+    dragRef.current = null;
+    pinchRef.current = null;
+  }, []);
+
+  // ── Render ───────────────────────────────────────────────────────
   return (
-    <div
-      className="fixed inset-0 z-[60] flex flex-col"
-      style={{ background: C.bg }}
-    >
+    <div className="fixed inset-0 z-[60] flex flex-col" style={{ background: C.ink }}>
+
       {/* Header */}
-      <div className="flex items-center justify-between px-5 pt-12 pb-4 flex-shrink-0">
+      <div className="flex items-center justify-between px-5 pt-12 pb-3 flex-shrink-0"
+           style={{ background: 'rgba(10,10,10,0.8)', backdropFilter: 'blur(8px)' }}>
         <div>
-          <div className="text-[9px] tracking-[0.3em] font-semibold" style={{ color: C.gold }}>
-            ESSAYAGE AR
-          </div>
-          <div className="text-[15px] font-semibold text-white truncate max-w-[200px]" style={{ fontFamily: 'Fraunces, serif' }}>
-            {product?.name}
+          <div className="text-[9px] tracking-[0.3em] font-semibold" style={{ color: C.gold }}>ESSAYAGE VIRTUEL</div>
+          <div className="text-[15px] font-semibold text-white truncate max-w-[220px]"
+               style={{ fontFamily: 'Fraunces,serif' }}>
+            {product?.brand} — {product?.name}
           </div>
         </div>
-        <button
-          onClick={handleClose}
-          className="w-10 h-10 rounded-full flex items-center justify-center"
-          style={{ background: 'rgba(255,255,255,0.12)' }}
-        >
+        <button onClick={handleClose}
+                className="w-10 h-10 rounded-full flex items-center justify-center"
+                style={{ background: 'rgba(255,255,255,0.1)' }}>
           <X size={18} color="white" />
         </button>
       </div>
 
-      {/* Video / Canvas */}
-      <div className="flex-1 relative overflow-hidden">
-        {/* Video feed — visible, mirrored like a selfie mirror */}
-        <video
-          ref={videoRef}
-          className="absolute inset-0 w-full h-full object-cover"
-          style={{ transform: 'scaleX(-1)' }}
-          playsInline
-          muted
-          autoPlay
-        />
+      {/* Camera area */}
+      <div className="flex-1 relative overflow-hidden"
+           ref={containerRef}
+           onTouchStart={started && !isLoading && !error ? onTouchStart : undefined}
+           onTouchMove={started && !isLoading && !error ? onTouchMove : undefined}
+           onTouchEnd={started && !isLoading && !error ? onTouchEnd : undefined}
+           style={{ touchAction: 'none' }}>
 
-        {/* Transparent canvas — glasses overlay only */}
-        <canvas
-          ref={canvasRef}
-          className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-          style={{ transform: 'scaleX(-1)' }}
-        />
+        {/* Video */}
+        <video ref={videoRef}
+               className="absolute inset-0 w-full h-full object-cover"
+               style={{ transform: 'scaleX(-1)' }}
+               playsInline muted autoPlay />
 
-        {/* Start screen — before camera begins */}
+        {/* Glasses overlay */}
+        {started && !isLoading && !error && (
+          <img
+            src={product?.img}
+            alt={product?.name}
+            draggable={false}
+            style={{
+              position: 'absolute',
+              left: `${pos.x}%`,
+              top: `${pos.y}%`,
+              width: `${70 * scale}%`,
+              transform: 'translateX(-50%)',
+              mixBlendMode: 'multiply',
+              pointerEvents: 'none',
+              userSelect: 'none',
+            }}
+          />
+        )}
+
+        {/* Start screen */}
         {!started && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 px-8">
-            <div
-              className="w-20 h-20 rounded-full flex items-center justify-center"
-              style={{ background: 'rgba(212,175,55,0.15)', border: `1.5px solid ${C.gold}` }}
-            >
+            <div className="w-20 h-20 rounded-full flex items-center justify-center"
+                 style={{ background: 'rgba(212,175,55,0.15)', border: `1.5px solid ${C.gold}` }}>
               <Camera size={36} color={C.gold} />
             </div>
             <div className="text-center">
@@ -152,127 +130,84 @@ export default function ARViewer({ product, onClose }) {
                 Essayage virtuel
               </div>
               <div className="text-[13px] text-white opacity-50">
-                Ta caméra frontale sera utilisée pour superposer les lunettes sur ton visage.
+                Caméra frontale · glisse pour repositionner · pince pour redimensionner
               </div>
             </div>
-            <button
-              onClick={handleStart}
-              className="px-8 py-4 text-[12px] tracking-[0.2em] font-semibold"
-              style={{ background: C.gold, color: C.ink }}
-            >
+            <button onClick={handleStart}
+                    className="px-8 py-4 text-[12px] tracking-[0.2em] font-semibold"
+                    style={{ background: C.gold, color: C.ink }}>
               ACTIVER LA CAMÉRA
             </button>
           </div>
         )}
 
-        {/* Loading state */}
+        {/* Loading */}
         {started && isLoading && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-8">
-            <div
-              className="w-12 h-12 rounded-full border-2 animate-spin"
-              style={{ borderColor: `${C.gold}40`, borderTopColor: C.gold }}
-            />
-            <div className="text-center">
-              <div className="text-[14px] text-white font-semibold mb-1">Chargement IA…</div>
-              <div className="text-[12px] text-white opacity-50">Premier lancement : ~10 secondes</div>
-            </div>
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
+            <div className="w-10 h-10 rounded-full border-2 animate-spin"
+                 style={{ borderColor: `${C.gold}40`, borderTopColor: C.gold }} />
+            <div className="text-[13px] text-white opacity-60">Ouverture caméra…</div>
           </div>
         )}
 
-        {/* Error states */}
+        {/* Error: permission denied */}
         {error === 'camera_denied' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 px-8">
-            <Camera size={48} color={C.gold} />
+            <Camera size={44} color={C.gold} />
             <div className="text-center">
               <div className="text-white font-semibold mb-2">Accès caméra refusé</div>
-              <div className="text-[13px] text-white opacity-60 mb-5">
-                Autorise l'accès à la caméra dans les réglages de ton iPhone pour utiliser l'essayage AR.
+              <div className="text-[12px] text-white opacity-50 mb-5">
+                Autorise la caméra dans Réglages → Safari → Caméra
               </div>
-              <button
-                onClick={initCamera}
-                className="flex items-center gap-2 px-5 py-3 text-[11px] tracking-[0.15em] font-semibold"
-                style={{ background: C.gold, color: C.ink }}
-              >
-                <RotateCcw size={13} /> RÉESSAYER
+              <button onClick={handleStart}
+                      className="flex items-center gap-2 px-5 py-3 text-[11px] tracking-[0.15em] font-semibold"
+                      style={{ background: C.gold, color: C.ink }}>
+                <RotateCcw size={12} /> RÉESSAYER
               </button>
             </div>
           </div>
         )}
 
+        {/* Error: no camera */}
         {error === 'no_camera' && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-8">
-            <Camera size={48} color="white" opacity="0.4" />
-            <div className="text-center text-white opacity-60 text-[13px]">
-              Aucune caméra disponible sur cet appareil.
-            </div>
+          <div className="absolute inset-0 flex flex-col items-center justify-center px-8">
+            <div className="text-[13px] text-white opacity-50 text-center">Aucune caméra disponible sur cet appareil.</div>
           </div>
         )}
 
+        {/* Error: other */}
         {error && error !== 'camera_denied' && error !== 'no_camera' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-8">
             <div className="text-center">
-              <div className="text-white font-semibold mb-2">Erreur de chargement</div>
-              <div className="text-[12px] text-white opacity-50 mb-5">{error}</div>
-              <button
-                onClick={initCamera}
-                className="flex items-center gap-2 px-5 py-3 text-[11px] tracking-[0.15em] font-semibold"
-                style={{ background: C.gold, color: C.ink }}
-              >
-                <RotateCcw size={13} /> RÉESSAYER
+              <div className="text-white font-semibold mb-2">Erreur caméra</div>
+              <div className="text-[11px] text-white opacity-40 mb-5">{error}</div>
+              <button onClick={handleStart}
+                      className="flex items-center gap-2 px-5 py-3 text-[11px] tracking-[0.15em] font-semibold"
+                      style={{ background: C.gold, color: C.ink }}>
+                <RotateCcw size={12} /> RÉESSAYER
               </button>
             </div>
           </div>
         )}
 
-        {/* Face hint when no face detected */}
-        {started && !isLoading && !error && faces.length === 0 && (
-          <div
-            className="absolute bottom-6 left-1/2 -translate-x-1/2 px-5 py-2.5 rounded-full text-[12px] font-semibold whitespace-nowrap"
-            style={{ background: 'rgba(0,0,0,0.65)', color: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(8px)' }}
-          >
-            Positionnez votre visage dans le cadre
-          </div>
-        )}
-
-        {/* Face guide oval */}
+        {/* Drag hint — shown briefly */}
         {started && !isLoading && !error && (
-          <svg
-            className="absolute inset-0 w-full h-full pointer-events-none"
-            style={{ opacity: faces.length > 0 ? 0 : 0.4 }}
-          >
-            <ellipse
-              cx="50%" cy="46%" rx="30%" ry="40%"
-              fill="none"
-              stroke={C.gold}
-              strokeWidth="1.5"
-              strokeDasharray="8 4"
-            />
-          </svg>
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px]"
+               style={{ background: 'rgba(0,0,0,0.5)', color: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(6px)' }}>
+            <Move size={11} />
+            Glisse · Pince pour redimensionner
+          </div>
         )}
       </div>
 
       {/* Bottom bar */}
-      <div
-        className="flex-shrink-0 px-5 pt-4 pb-10"
-        style={{ background: 'rgba(10,10,10,0.95)' }}
-      >
-        <div className="flex items-center gap-3">
-          <img
-            src={product?.img}
-            alt={product?.name}
-            className="w-12 h-12 object-cover rounded flex-shrink-0"
-            style={{ background: '#1A1A1A' }}
-          />
-          <div className="flex-1 min-w-0">
-            <div className="text-[10px] tracking-[0.2em] font-semibold" style={{ color: C.gold }}>
-              {product?.brand}
-            </div>
-            <div className="text-[13px] text-white truncate">{product?.name}</div>
-          </div>
-          <div
-            className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-            style={{ background: faces.length > 0 ? '#2D7D46' : 'rgba(255,255,255,0.2)' }}
-          />
+      <div className="flex-shrink-0 px-5 pt-3 pb-10 flex items-center gap-3"
+           style={{ background: 'rgba(10,10,10,0.9)' }}>
+        <img src={product?.img} alt="" className="w-12 h-12 object-cover rounded flex-shrink-0"
+             style={{ background: '#1A1A1A' }} />
+        <div className="flex-1 min-w-0">
+          <div className="text-[10px] tracking-[0.2em] font-semibold" style={{ color: C.gold }}>{product?.brand}</div>
+          <div className="text-[13px] text-white truncate">{product?.name}</div>
         </div>
       </div>
     </div>

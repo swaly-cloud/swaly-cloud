@@ -170,7 +170,7 @@ router.post('/sync/woocommerce', async (req, res) => {
     for (const wp of wcProducts) {
       const rawImgs = (wp.images || []).map(i => i.src).filter(Boolean);
       const imgs = rawImgs.map(src => `https://wsrv.nl/?url=${encodeURIComponent(src)}&w=600&output=webp`);
-      const img = imgs[0] || '';
+      const img = imgs[2] || imgs[0] || ''; // 3rd image = front-facing view
       const price = Math.round(parseFloat(wp.price || wp.regular_price || '0'));
       const description = (wp.short_description || wp.description || '').replace(/<[^>]*>/g, '').trim();
       const cat = wp.categories?.[0]?.name?.toLowerCase().includes('soleil') ? 'soleil'
@@ -180,8 +180,10 @@ router.post('/sync/woocommerce', async (req, res) => {
 
       const existing = db.products.find(p => p.wc_id === wp.id);
       if (existing) {
-        // Preserve manually-chosen primary image if it's still in the new imgs list
-        const keepImg = existing.img && imgs.includes(existing.img) ? existing.img : img;
+        // Keep manually-chosen image only if it differs from both auto-defaults (imgs[0] & imgs[2])
+        const autoDefaults = [imgs[0], imgs[2]].filter(Boolean);
+        const isManual = existing.img && imgs.includes(existing.img) && !autoDefaults.includes(existing.img);
+        const keepImg = isManual ? existing.img : img;
         Object.assign(existing, { name: decodeHtml(wp.name), price, img: keepImg, imgs, description, is_new: wp.featured, wc_id: wp.id });
         updated++;
       } else {

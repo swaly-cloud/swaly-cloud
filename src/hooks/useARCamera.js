@@ -15,6 +15,11 @@ export function useARCamera() {
   }, []);
 
   const initCamera = useCallback(async () => {
+    // Clean up any existing stream first
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+    }
     setIsLoading(true);
     setError(null);
     try {

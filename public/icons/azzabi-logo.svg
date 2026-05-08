@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
   <!-- Background -->
-  <rect width="180" height="180" fill="#0A0A0A" rx="36"/>
+  <rect width="192" height="192" fill="#0A0A0A"/>
 
   <!-- Gradient -->
   <defs>
@@ -11,19 +11,20 @@
     </linearGradient>
   </defs>
 
-  <!-- Azzabi Mark (glasses + sparkle) -->
-  <g transform="translate(45, 30)">
-    <!-- Left lens -->
-    <circle cx="15" cy="30" r="18" fill="none" stroke="url(#lg)" stroke-width="3"/>
-    <!-- Right lens -->
-    <circle cx="60" cy="30" r="18" fill="none" stroke="url(#lg)" stroke-width="3"/>
-    <!-- Bridge -->
-    <rect x="33" y="28" width="14" height="4" fill="url(#lg)" rx="2"/>
-    <!-- Sparkle -->
-    <polygon points="37.5,0 38.5,6 44,6 39.5,10 40.5,16 37.5,12.5 34.5,16 35.5,10 31,6 36.5,6" fill="url(#lg)"/>
-  </g>
+  <!-- Large glasses logo centered -->
+  <g transform="translate(48, 40)">
+    <!-- Left lens (bigger) -->
+    <circle cx="20" cy="40" r="26" fill="none" stroke="url(#lg)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
 
-  <!-- Text: AZZABI OPTIC -->
-  <text x="90" y="145" font-family="Montserrat, sans-serif" font-size="18" font-weight="800" fill="url(#lg)" text-anchor="middle" letter-spacing="1">AZZABI</text>
-  <text x="90" y="162" font-family="Montserrat, sans-serif" font-size="12" font-weight="700" fill="url(#lg)" text-anchor="middle" letter-spacing="2" opacity="0.8">OPTIC</text>
+    <!-- Right lens (bigger) -->
+    <circle cx="76" cy="40" r="26" fill="none" stroke="url(#lg)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- Bridge -->
+    <rect x="46" y="36" width="20" height="8" fill="url(#lg)" rx="4"/>
+
+    <!-- Sparkle star (larger) -->
+    <g transform="translate(48, 0)">
+      <polygon points="0,-12 2.5,-3 12,-2 6,3 8,12 0,7 -8,12 -6,3 -12,-2 -2.5,-3" fill="url(#lg)"/>
+    </g>
+  </g>
 </svg>

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { X, Camera, RotateCcw } from 'lucide-react';
 import { useARCamera } from '../hooks/useARCamera';
 
@@ -47,6 +47,7 @@ function drawOverlay(canvas, video, faces, glassesImg) {
 export default function ARViewer({ product, onClose }) {
   const canvasRef = useRef(null);
   const glassesImgRef = useRef(null);
+  const [started, setStarted] = useState(false);
   const { videoRef, faces, isLoading, error, initCamera, stopCamera } = useARCamera();
 
   // Preload glasses image
@@ -58,11 +59,11 @@ export default function ARViewer({ product, onClose }) {
     img.onload = () => { glassesImgRef.current = img; };
   }, [product?.img]);
 
-  // Start camera on mount
-  useEffect(() => {
+  // Camera starts only when user taps the button (iOS requires user gesture)
+  const handleStart = useCallback(() => {
+    setStarted(true);
     initCamera();
-    return () => stopCamera();
-  }, [initCamera, stopCamera]);
+  }, [initCamera]);
 
   // Draw loop
   useEffect(() => {
@@ -127,8 +128,35 @@ export default function ARViewer({ product, onClose }) {
           className="absolute inset-0 w-full h-full object-cover"
         />
 
+        {/* Start screen — before camera begins */}
+        {!started && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 px-8">
+            <div
+              className="w-20 h-20 rounded-full flex items-center justify-center"
+              style={{ background: 'rgba(212,175,55,0.15)', border: `1.5px solid ${C.gold}` }}
+            >
+              <Camera size={36} color={C.gold} />
+            </div>
+            <div className="text-center">
+              <div className="text-white text-[17px] font-semibold mb-2" style={{ fontFamily: 'Fraunces,serif' }}>
+                Essayage virtuel
+              </div>
+              <div className="text-[13px] text-white opacity-50">
+                Ta caméra frontale sera utilisée pour superposer les lunettes sur ton visage.
+              </div>
+            </div>
+            <button
+              onClick={handleStart}
+              className="px-8 py-4 text-[12px] tracking-[0.2em] font-semibold"
+              style={{ background: C.gold, color: C.ink }}
+            >
+              ACTIVER LA CAMÉRA
+            </button>
+          </div>
+        )}
+
         {/* Loading state */}
-        {isLoading && (
+        {started && isLoading && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-8">
             <div
               className="w-12 h-12 rounded-full border-2 animate-spin"
@@ -187,9 +215,9 @@ export default function ARViewer({ product, onClose }) {
         )}
 
         {/* Face hint when no face detected */}
-        {!isLoading && !error && faces.length === 0 && (
+        {started && !isLoading && !error && faces.length === 0 && (
           <div
-            className="absolute bottom-6 left-1/2 -translate-x-1/2 px-5 py-2.5 rounded-full text-[12px] font-semibold"
+            className="absolute bottom-6 left-1/2 -translate-x-1/2 px-5 py-2.5 rounded-full text-[12px] font-semibold whitespace-nowrap"
             style={{ background: 'rgba(0,0,0,0.65)', color: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(8px)' }}
           >
             Positionnez votre visage dans le cadre
@@ -197,7 +225,7 @@ export default function ARViewer({ product, onClose }) {
         )}
 
         {/* Face guide oval */}
-        {!isLoading && !error && (
+        {started && !isLoading && !error && (
           <svg
             className="absolute inset-0 w-full h-full pointer-events-none"
             style={{ opacity: faces.length > 0 ? 0 : 0.4 }}

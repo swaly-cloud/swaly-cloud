@@ -39,6 +39,8 @@ function glassesStyle(detection, vW, vH, cW, cH) {
     width:`${(glassW  / cW) * 100}%`,
     transform: 'translate(-50%, -50%)',
     mixBlendMode: 'multiply',
+    WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 18%, black 82%, transparent 100%)',
+    maskImage: 'linear-gradient(to right, transparent 0%, black 18%, black 82%, transparent 100%)',
     pointerEvents: 'none',
     userSelect: 'none',
   };

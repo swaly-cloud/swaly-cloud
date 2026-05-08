@@ -20,10 +20,13 @@ async function initDB() {
         genre   TEXT NOT NULL,
         price   NUMERIC NOT NULL,
         img     TEXT DEFAULT '',
+        imgs    JSONB DEFAULT '[]',
         description TEXT DEFAULT '',
         accent  TEXT DEFAULT '#D4AF37',
         is_new  BOOLEAN DEFAULT false
       );
+
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS imgs JSONB DEFAULT '[]';
 
       CREATE TABLE IF NOT EXISTS orders (
         ref     TEXT PRIMARY KEY,
@@ -71,12 +74,12 @@ async function initDB() {
 }
 
 async function readDB() {
-  const productsRes = await pool.query('SELECT id, wc_id, brand, name, cat, genre, price, img, description, accent, is_new FROM products ORDER BY id');
+  const productsRes = await pool.query('SELECT id, wc_id, brand, name, cat, genre, price, img, imgs, description, accent, is_new FROM products ORDER BY id');
   const ordersRes = await pool.query('SELECT data FROM orders ORDER BY (data->>\'created_at\') DESC');
   const appointmentsRes = await pool.query('SELECT data FROM appointments ORDER BY (data->>\'created_at\') DESC');
 
   return {
-    products: productsRes.rows.map(p => ({ ...p, is_new: Boolean(p.is_new) })),
+    products: productsRes.rows.map(p => ({ ...p, is_new: Boolean(p.is_new), imgs: p.imgs || [] })),
     orders: ordersRes.rows.map(r => r.data),
     appointments: appointmentsRes.rows.map(r => r.data),
   };
@@ -88,7 +91,7 @@ async function writeDB(data) {
     await client.query('BEGIN');
 
     await client.query('DELETE FROM products');
-    const insertProduct = 'INSERT INTO products (wc_id, brand, name, cat, genre, price, img, description, accent, is_new) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)';
+    const insertProduct = 'INSERT INTO products (wc_id, brand, name, cat, genre, price, img, imgs, description, accent, is_new) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)';
     for (const p of data.products) {
       await client.query(insertProduct, [
         p.wc_id || null,
@@ -98,6 +101,7 @@ async function writeDB(data) {
         p.genre,
         p.price,
         p.img || '',
+        JSON.stringify(p.imgs || []),
         p.description || '',
         p.accent || '#D4AF37',
         Boolean(p.is_new),

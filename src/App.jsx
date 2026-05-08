@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { api } from './api';
 import AdminPanel from './AdminPanel';
 import ARViewer from './components/ARViewer';
@@ -688,6 +688,46 @@ return (
 );
 }
 
+// ─── PRODUCT GALLERY ───────────────────────────────────────────────
+function ProductGallery({ product }) {
+  const imgs = (product.imgs && product.imgs.length > 0) ? product.imgs : (product.img ? [product.img] : []);
+  const [idx, setIdx] = useState(0);
+  const scrollRef = useRef(null);
+
+  const onScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const i = Math.round(el.scrollLeft / el.offsetWidth);
+    setIdx(i);
+  }, []);
+
+  if (imgs.length === 0) return <div className="aspect-square" style={{ background: C.bgSoft }} />;
+
+  return (
+    <div className="relative" style={{ background: C.bgSoft }}>
+      <div
+        ref={scrollRef}
+        onScroll={onScroll}
+        className="flex overflow-x-auto"
+        style={{ scrollSnapType: 'x mandatory', scrollBehavior: 'smooth', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
+        {imgs.map((src, i) => (
+          <div key={i} className="flex-shrink-0 w-full aspect-square relative" style={{ scrollSnapAlign: 'start' }}>
+            <img src={src} alt="" className="absolute inset-0 w-full h-full object-contain" style={{ padding: '8%' }} />
+          </div>
+        ))}
+      </div>
+      {imgs.length > 1 && (
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+          {imgs.map((_, i) => (
+            <div key={i} className="rounded-full transition-all" style={{ width: i === idx ? 16 : 6, height: 6, background: i === idx ? C.gold : 'rgba(0,0,0,0.25)' }} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AzzabiOpticApp() {
 const [tab, setTab] = useState('home');
 const [ccy, setCcy] = useState('TND');
@@ -805,9 +845,7 @@ return (
 <X size={18} style={{ color:C.ink }}/>
 </button>
 <div className="overflow-y-auto h-full">
-<div className="aspect-square relative" style={{ background:C.bgSoft }}>
-<img src={selectedProduct.img} alt={`${selectedProduct.brand}`} className="absolute inset-0 w-full h-full object-contain" style={{ padding:'8%' }}/>
-</div>
+<ProductGallery product={selectedProduct} />
 <div className="px-5 pt-6 pb-32">
 <div className="text-[10px] tracking-[0.25em] font-semibold mb-2" style={{ color:C.mute }}>{selectedProduct.brand}</div>
 <h1 className="text-[28px] leading-tight mb-2" style={{ fontFamily:'Fraunces,serif', fontWeight:400, color:C.ink }}>{selectedProduct.name}</h1>

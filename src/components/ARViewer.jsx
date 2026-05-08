@@ -12,25 +12,22 @@ function glassesStyle(detection, vW, vH, cW, cH) {
   const kp = detection.keypoints;
   if (!kp || kp.length < 2) return null;
 
-  // object-cover scale + crop
   const scale = Math.max(cW / vW, cH / vH);
   const cropX = (vW * scale - cW) / 2;
   const cropY = (vH * scale - cH) / 2;
 
-  // Keypoints are normalized → convert to display pixels (before CSS mirror)
   const lx = kp[0].x * vW * scale - cropX;
   const rx = kp[1].x * vW * scale - cropX;
   const ly = kp[0].y * vH * scale - cropY;
   const ry = kp[1].y * vH * scale - cropY;
 
-  // Mirror X (CSS scaleX(-1) on video)
   const lxM = cW - lx;
   const rxM = cW - rx;
 
   const centerX = (lxM + rxM) / 2;
   const centerY = (ly + ry) / 2;
   const eyeSpanPx = Math.abs(lxM - rxM);
-  const glassW = eyeSpanPx * 2.4; // glasses ~2.4x the inter-eye distance
+  const glassW = eyeSpanPx * 2.4;
 
   return {
     position: 'absolute',
@@ -39,11 +36,60 @@ function glassesStyle(detection, vW, vH, cW, cH) {
     width:`${(glassW  / cW) * 100}%`,
     transform: 'translate(-50%, -50%)',
     mixBlendMode: 'multiply',
-    WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 18%, black 82%, transparent 100%)',
-    maskImage: 'linear-gradient(to right, transparent 0%, black 18%, black 82%, transparent 100%)',
     pointerEvents: 'none',
     userSelect: 'none',
   };
+}
+
+// ARM = fraction of the image width occupied by each temple arm (left & right)
+const ARM = 0.22;
+const CTR = 1 - 2 * ARM; // center (lenses) fraction = 0.56
+
+// Renders glasses in 3 parts so the temples appear to angle back toward the ears in 3D.
+function GlassesOverlay({ src, style }) {
+  const [ar, setAr] = useState(3); // aspect-ratio, loaded from image
+
+  useEffect(() => {
+    if (!src) return;
+    const img = new Image();
+    img.onload = () => { if (img.naturalWidth) setAr(img.naturalWidth / img.naturalHeight); };
+    img.src = src;
+  }, [src]);
+
+  const sec = { position: 'absolute', top: 0, height: '100%', overflow: 'hidden' };
+  const imgBase = { height: '100%', display: 'block', maxWidth: 'none', pointerEvents: 'none', userSelect: 'none' };
+
+  return (
+    <div style={{ ...style, aspectRatio: ar }}>
+      {/* Left arm — rotates away from viewer toward left ear */}
+      <div style={{ ...sec, left: 0, width: `${ARM * 100}%` }}>
+        <img src={src} alt="" draggable={false} style={{
+          ...imgBase,
+          width: `${100 / ARM}%`,
+          transformOrigin: 'right center',
+          transform: 'perspective(150px) rotateY(50deg)',
+        }} />
+      </div>
+      {/* Center frame — flat, faces camera */}
+      <div style={{ ...sec, left: `${ARM * 100}%`, width: `${CTR * 100}%` }}>
+        <img src={src} alt="" draggable={false} style={{
+          ...imgBase,
+          width: `${100 / CTR}%`,
+          marginLeft: `${-(ARM / CTR) * 100}%`,
+        }} />
+      </div>
+      {/* Right arm — rotates away from viewer toward right ear */}
+      <div style={{ ...sec, right: 0, width: `${ARM * 100}%` }}>
+        <img src={src} alt="" draggable={false} style={{
+          ...imgBase,
+          width: `${100 / ARM}%`,
+          marginLeft: `-${((ARM + CTR) / ARM) * 100}%`,
+          transformOrigin: 'left center',
+          transform: 'perspective(150px) rotateY(-50deg)',
+        }} />
+      </div>
+    </div>
+  );
 }
 
 export default function ARViewer({ product, onClose }) {
@@ -59,7 +105,6 @@ export default function ARViewer({ product, onClose }) {
   const hasFaces = faces.length > 0;
   const isLive = phase === 'live';
 
-  // Track video native dimensions for coordinate normalization
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -69,7 +114,6 @@ export default function ARViewer({ product, onClose }) {
     return () => video.removeEventListener('loadedmetadata', onMeta);
   }, [videoRef]);
 
-
   const handleStart = useCallback(() => {
     setStarted(true);
     initCamera();
@@ -77,7 +121,6 @@ export default function ARViewer({ product, onClose }) {
 
   const handleClose = useCallback(() => { stopCamera(); onClose(); }, [stopCamera, onClose]);
 
-  // Touch drag/pinch (CSS overlay mode — when no face detected)
   const onTouchStart = useCallback((e) => {
     if (e.touches.length === 1) {
       dragRef.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, startPosX: pos.x, startPosY: pos.y };
@@ -104,6 +147,12 @@ export default function ARViewer({ product, onClose }) {
   }, []);
 
   const onTouchEnd = useCallback(() => { dragRef.current = null; pinchRef.current = null; }, []);
+
+  const glassesOverlayStyle = hasFaces && videoDims.w > 0
+    ? glassesStyle(faces[0], videoDims.w, videoDims.h, containerRef.current?.offsetWidth, containerRef.current?.offsetHeight)
+    : { position: 'absolute', left: `${pos.x}%`, top: `${pos.y}%`,
+        width: `${70 * scale}%`, transform: 'translate(-50%, -50%)',
+        mixBlendMode: 'multiply', pointerEvents: 'none', userSelect: 'none' };
 
   return (
     <div className="fixed inset-0 z-[60] flex flex-col" style={{ background: C.ink }}>
@@ -135,18 +184,9 @@ export default function ARViewer({ product, onClose }) {
                style={{ transform: 'scaleX(-1)', display: isLive ? 'block' : 'none' }}
                playsInline muted autoPlay />
 
-        {/* Glasses — centered on eye keypoints when face detected, manual drag/pinch otherwise */}
-        {isLive && (
-          <img
-            src={product?.img} alt="" draggable={false}
-            style={
-              hasFaces && videoDims.w > 0
-                ? glassesStyle(faces[0], videoDims.w, videoDims.h, containerRef.current?.offsetWidth, containerRef.current?.offsetHeight)
-                : { position: 'absolute', left: `${pos.x}%`, top: `${pos.y}%`,
-                    width: `${70 * scale}%`, transform: 'translate(-50%, -50%)',
-                    mixBlendMode: 'multiply', pointerEvents: 'none', userSelect: 'none' }
-            }
-          />
+        {/* Glasses — 3D temple effect */}
+        {isLive && glassesOverlayStyle && (
+          <GlassesOverlay src={product?.img} style={glassesOverlayStyle} />
         )}
 
         {/* START */}

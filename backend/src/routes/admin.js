@@ -169,7 +169,7 @@ router.post('/sync/woocommerce', async (req, res) => {
       const rawImg = wp.images?.[0]?.src || '';
       const img = rawImg ? `https://wsrv.nl/?url=${encodeURIComponent(rawImg)}&w=600&output=webp` : '';
       const price = Math.round(parseFloat(wp.price || wp.regular_price || '0'));
-      const desc = (wp.short_description || wp.description || '').replace(/<[^>]*>/g, '').trim();
+      const description = (wp.short_description || wp.description || '').replace(/<[^>]*>/g, '').trim();
       const cat = wp.categories?.[0]?.name?.toLowerCase().includes('soleil') ? 'soleil'
                 : wp.categories?.[0]?.name?.toLowerCase().includes('vue')    ? 'vue'
                 : wp.categories?.[0]?.name?.toLowerCase().includes('lentill') ? 'lentilles'
@@ -177,7 +177,7 @@ router.post('/sync/woocommerce', async (req, res) => {
 
       const existing = db.products.find(p => p.wc_id === wp.id);
       if (existing) {
-        Object.assign(existing, { name: wp.name, price, img, desc, is_new: wp.featured, wc_id: wp.id });
+        Object.assign(existing, { name: wp.name, price, img, description, is_new: wp.featured, wc_id: wp.id });
         updated++;
       } else {
         const maxId = db.products.reduce((m, p) => Math.max(m, p.id), 0);
@@ -190,7 +190,7 @@ router.post('/sync/woocommerce', async (req, res) => {
           genre: 'unisexe',
           price,
           img,
-          desc,
+          description,
           accent: '#D4AF37',
           is_new: wp.featured,
         });

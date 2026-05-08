@@ -165,6 +165,8 @@ router.post('/sync/woocommerce', async (req, res) => {
     const db = await readDB();
     let added = 0, updated = 0;
 
+    const decodeHtml = s => (s || '').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#039;/g,"'");
+
     for (const wp of wcProducts) {
       const rawImgs = (wp.images || []).map(i => i.src).filter(Boolean);
       const imgs = rawImgs.map(src => `https://wsrv.nl/?url=${encodeURIComponent(src)}&w=600&output=webp`);
@@ -180,15 +182,15 @@ router.post('/sync/woocommerce', async (req, res) => {
       if (existing) {
         // Preserve manually-chosen primary image if it's still in the new imgs list
         const keepImg = existing.img && imgs.includes(existing.img) ? existing.img : img;
-        Object.assign(existing, { name: wp.name, price, img: keepImg, imgs, description, is_new: wp.featured, wc_id: wp.id });
+        Object.assign(existing, { name: decodeHtml(wp.name), price, img: keepImg, imgs, description, is_new: wp.featured, wc_id: wp.id });
         updated++;
       } else {
         const maxId = db.products.reduce((m, p) => Math.max(m, p.id), 0);
         db.products.push({
           id: maxId + 1,
           wc_id: wp.id,
-          brand: wp.brands?.[0]?.name || wp.tags?.[0]?.name || 'Azzabi Optic',
-          name: wp.name,
+          brand: decodeHtml(wp.brands?.[0]?.name || wp.tags?.[0]?.name || 'Azzabi Optic'),
+          name: decodeHtml(wp.name),
           cat,
           genre: 'unisexe',
           price,

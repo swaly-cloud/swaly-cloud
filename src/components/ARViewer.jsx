@@ -37,7 +37,7 @@ function glassesStyle(detection, vW, vH, cW, cH) {
     left: `${(centerX / cW) * 100}%`,
     top:  `${(centerY / cH) * 100}%`,
     width:`${(glassW  / cW) * 100}%`,
-    transform: 'translateX(-50%)',
+    transform: 'translate(-50%, -50%)',
     mixBlendMode: 'multiply',
     pointerEvents: 'none',
     userSelect: 'none',
@@ -133,43 +133,18 @@ export default function ARViewer({ product, onClose }) {
                style={{ transform: 'scaleX(-1)', display: isLive ? 'block' : 'none' }}
                playsInline muted autoPlay />
 
-        {/* Glasses — auto-positioned when face detected, manual drag/pinch otherwise */}
+        {/* Glasses — centered on eye keypoints when face detected, manual drag/pinch otherwise */}
         {isLive && (
-          <>
-            <img
-              src={product?.img} alt="" draggable={false}
-              style={
-                hasFaces && videoDims.w > 0
-                  ? glassesStyle(faces[0], videoDims.w, videoDims.h, containerRef.current?.offsetWidth, containerRef.current?.offsetHeight)
-                  : { position: 'absolute', left: `${pos.x}%`, top: `${pos.y}%`,
-                      width: `${70 * scale}%`, transform: 'translateX(-50%)',
-                      mixBlendMode: 'multiply', pointerEvents: 'none', userSelect: 'none' }
-              }
-            />
-            {/* DEBUG — remove after fix */}
-            {hasFaces && videoDims.w > 0 && (() => {
-              const kp = faces[0]?.keypoints;
-              const cW = containerRef.current?.offsetWidth || 1;
-              const cH = containerRef.current?.offsetHeight || 1;
-              const vW = videoDims.w; const vH = videoDims.h;
-              const sc = Math.max(cW/vW, cH/vH);
-              const cropX = (vW*sc - cW)/2; const cropY = (vH*sc - cH)/2;
-              if (!kp || kp.length < 2) return <div style={{position:'absolute',top:4,left:4,color:'red',fontSize:10,background:'rgba(0,0,0,0.7)',padding:4}}>no keypoints ({kp?.length})</div>;
-              const ly = kp[0].y * vH * sc - cropY;
-              const ry = kp[1].y * vH * sc - cropY;
-              const lx = cW - (kp[0].x * vW * sc - cropX);
-              const rx = cW - (kp[1].x * vW * sc - cropX);
-              const cy = (ly+ry)/2; const cx = (lx+rx)/2;
-              return <>
-                <div style={{position:'absolute',left:cx,top:cy,width:12,height:12,borderRadius:'50%',background:'red',transform:'translate(-50%,-50%)',pointerEvents:'none'}}/>
-                <div style={{position:'absolute',top:4,left:4,color:'lime',fontSize:10,background:'rgba(0,0,0,0.7)',padding:4,lineHeight:1.4}}>
-                  kp0:({kp[0].x.toFixed(2)},{kp[0].y.toFixed(2)}) kp1:({kp[1].x.toFixed(2)},{kp[1].y.toFixed(2)})<br/>
-                  cx:{cx.toFixed(0)}px cy:{cy.toFixed(0)}px<br/>
-                  vW:{vW} vH:{vH} cW:{cW} cH:{cH} sc:{sc.toFixed(2)}
-                </div>
-              </>;
-            })()}
-          </>
+          <img
+            src={product?.img} alt="" draggable={false}
+            style={
+              hasFaces && videoDims.w > 0
+                ? glassesStyle(faces[0], videoDims.w, videoDims.h, containerRef.current?.offsetWidth, containerRef.current?.offsetHeight)
+                : { position: 'absolute', left: `${pos.x}%`, top: `${pos.y}%`,
+                    width: `${70 * scale}%`, transform: 'translate(-50%, -50%)',
+                    mixBlendMode: 'multiply', pointerEvents: 'none', userSelect: 'none' }
+            }
+          />
         )}
 
         {/* START */}

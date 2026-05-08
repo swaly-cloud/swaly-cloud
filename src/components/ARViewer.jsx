@@ -7,7 +7,7 @@ const C = {
   bg: '#0A0A0A', error: '#C0392B',
 };
 
-// Draw glasses image over detected face
+// Draw only the glasses overlay on a transparent canvas
 function drawOverlay(canvas, video, faces, glassesImg) {
   const ctx = canvas.getContext('2d');
   const W = canvas.width;
@@ -15,30 +15,22 @@ function drawOverlay(canvas, video, faces, glassesImg) {
 
   ctx.clearRect(0, 0, W, H);
 
-  // Mirror the video (front camera is mirrored)
-  ctx.save();
-  ctx.scale(-1, 1);
-  ctx.drawImage(video, -W, 0, W, H);
-  ctx.restore();
-
   if (!glassesImg || faces.length === 0) return;
 
   for (const face of faces) {
     const bb = face.boundingBox;
     if (!bb) continue;
 
-    // Bounding box coords are normalized [0,1]
     const x = bb.originX * W;
     const y = bb.originY * H;
     const w = bb.width * W;
-    const h = bb.height * H;
 
-    // Place glasses in the upper third of the face (eye area)
-    // Mirror X since video is mirrored
-    const gW = w * 1.1;
+    // Glasses width = face width, eye area = upper ~30% of face
+    const gW = w * 1.15;
     const gH = gW * (glassesImg.naturalHeight / glassesImg.naturalWidth);
-    const gX = W - (x + w / 2 + gW / 2);
-    const gY = y + h * 0.22;
+    // Mirror X to match video element scaleX(-1)
+    const gX = W - (x + w / 2) - gW / 2;
+    const gY = y + bb.height * H * 0.22;
 
     ctx.drawImage(glassesImg, gX, gY, gW, gH);
   }
@@ -65,15 +57,31 @@ export default function ARViewer({ product, onClose }) {
     initCamera();
   }, [initCamera]);
 
-  // Draw loop
+  // Sync canvas size once when video starts
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    const onResize = () => {
+      if (canvasRef.current) {
+        canvasRef.current.width = video.videoWidth || 640;
+        canvasRef.current.height = video.videoHeight || 480;
+      }
+    };
+    video.addEventListener('loadedmetadata', onResize);
+    video.addEventListener('resize', onResize);
+    return () => {
+      video.removeEventListener('loadedmetadata', onResize);
+      video.removeEventListener('resize', onResize);
+    };
+  }, [videoRef]);
+
+  // Draw glasses overlay each frame
   useEffect(() => {
     let raf;
     const loop = () => {
       const canvas = canvasRef.current;
       const video = videoRef.current;
-      if (canvas && video && video.readyState >= 2) {
-        canvas.width = video.videoWidth || 640;
-        canvas.height = video.videoHeight || 480;
+      if (canvas && video && canvas.width > 0) {
         drawOverlay(canvas, video, faces, glassesImgRef.current);
       }
       raf = requestAnimationFrame(loop);
@@ -113,19 +121,21 @@ export default function ARViewer({ product, onClose }) {
 
       {/* Video / Canvas */}
       <div className="flex-1 relative overflow-hidden">
-        {/* Hidden video element */}
+        {/* Video feed — visible, mirrored like a selfie mirror */}
         <video
           ref={videoRef}
-          className="absolute inset-0 w-full h-full object-cover opacity-0 pointer-events-none"
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{ transform: 'scaleX(-1)' }}
           playsInline
           muted
           autoPlay
         />
 
-        {/* Canvas with overlay */}
+        {/* Transparent canvas — glasses overlay only */}
         <canvas
           ref={canvasRef}
-          className="absolute inset-0 w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+          style={{ transform: 'scaleX(-1)' }}
         />
 
         {/* Start screen — before camera begins */}

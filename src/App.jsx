@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { api } from './api';
 import AdminPanel from './AdminPanel';
+import ARViewer from './components/ARViewer';
 import {
 Home, ShoppingBag, Globe2, CalendarDays, User, Search, Heart,
 MapPin, Phone, Plane, Gift, ChevronRight, ChevronLeft, X, Check,
@@ -702,6 +703,7 @@ const [products, setProducts] = useState(PRODUCTS);
 const [apiReady, setApiReady] = useState(false);
 const [catFilter, setCatFilter] = useState('all');
 const [genreFilter, setGenreFilter] = useState('all');
+const [showAR, setShowAR] = useState(false);
 
 const fetchProducts = useCallback(() => {
   api.products.list().then(data => {
@@ -815,6 +817,11 @@ return (
 <div className="flex items-baseline gap-3 mb-6 pb-6" style={{ borderBottom:`1px solid ${C.line}` }}>
 <div className="text-[26px] tabular-nums font-semibold" style={{ color:C.ink }}>{fmt(selectedProduct.price,ccy)}</div>
 </div>
+{selectedProduct.img && !selectedProduct.img.includes('picsum.photos') && (
+<button onClick={()=>setShowAR(true)} className="w-full py-3.5 text-[11px] tracking-[0.22em] font-semibold flex items-center justify-center gap-2 mb-3" style={{ background:C.goldLight, color:C.ink }}>
+👓 ESSAYER EN AR
+</button>
+)}
 <button onClick={()=>{addToCart(selectedProduct);setSelectedProduct(null);setCartOpen(true);}} className="w-full py-4 text-[11px] tracking-[0.22em] font-semibold flex items-center justify-center gap-2" style={{ background:C.ink, color:'#FFF' }}>
 <Plus size={15}/>AJOUTER AU PANIER
 </button>
@@ -824,6 +831,9 @@ return (
 )}
 {cartOpen && (
 <CartScreen cart={cart} ccy={ccy} lang={lang} onClose={()=>setCartOpen(false)} onUpdate={updateQty} onRemove={removeFromCart} onCheckout={handleCheckout} orders={orders}/>
+)}
+{showAR && selectedProduct && (
+<ARViewer product={selectedProduct} onClose={()=>setShowAR(false)}/>
 )}
 {showAdmin && <AdminPanel onClose={()=>{ setShowAdmin(false); fetchProducts(); }} onSync={fetchProducts}/>}
 {/* Secret admin trigger — triple tap on logo area */}

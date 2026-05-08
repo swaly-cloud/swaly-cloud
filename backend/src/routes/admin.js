@@ -167,16 +167,33 @@ router.post('/sync/woocommerce', async (req, res) => {
 
     const decodeHtml = s => (s || '').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#039;/g,"'");
 
-    for (const wp of wcProducts) {
+    const parseWcProduct = (wp) => {
       const rawImgs = (wp.images || []).map(i => i.src).filter(Boolean);
       const imgs = rawImgs.map(src => `https://wsrv.nl/?url=${encodeURIComponent(src)}&w=600&output=webp`);
       const img = imgs[2] || imgs[0] || ''; // 3rd image = front-facing view
       const price = Math.round(parseFloat(wp.price || wp.regular_price || '0'));
       const description = (wp.short_description || wp.description || '').replace(/<[^>]*>/g, '').trim();
-      const cat = wp.categories?.[0]?.name?.toLowerCase().includes('soleil') ? 'soleil'
-                : wp.categories?.[0]?.name?.toLowerCase().includes('vue')    ? 'vue'
-                : wp.categories?.[0]?.name?.toLowerCase().includes('lentill') ? 'lentilles'
+
+      const allCatNames = (wp.categories || []).map(c => c.name.toLowerCase()).join(' ');
+      const cat = allCatNames.includes('soleil') ? 'soleil'
+                : allCatNames.includes('vue')    ? 'vue'
+                : allCatNames.includes('lentill') ? 'lentilles'
                 : 'soleil';
+
+      // Extract genre from WC attributes (Genre, Sexe, Gender, Pa_genre, etc.)
+      const attrs = (wp.attributes || []).map(a => ({ name: a.name.toLowerCase(), val: (a.options || []).join(' ').toLowerCase() }));
+      const genreAttr = attrs.find(a => /genre|sexe|gender/.test(a.name));
+      const genreRaw = genreAttr ? genreAttr.val : '';
+      const genre = genreRaw.includes('femme') || genreRaw.includes('woman') || genreRaw.includes('female') ? 'femme'
+                  : genreRaw.includes('homme') || genreRaw.includes('man') || genreRaw.includes('male')   ? 'homme'
+                  : 'unisexe';
+
+      const brand = decodeHtml(wp.brands?.[0]?.name || wp.tags?.[0]?.name || 'Azzabi Optic');
+      return { imgs, img, price, description, cat, genre, brand };
+    };
+
+    for (const wp of wcProducts) {
+      const { imgs, img, price, description, cat, genre, brand } = parseWcProduct(wp);
 
       const existing = db.products.find(p => p.wc_id === wp.id);
       if (existing) {
@@ -184,17 +201,17 @@ router.post('/sync/woocommerce', async (req, res) => {
         const autoDefaults = [imgs[0], imgs[2]].filter(Boolean);
         const isManual = existing.img && imgs.includes(existing.img) && !autoDefaults.includes(existing.img);
         const keepImg = isManual ? existing.img : img;
-        Object.assign(existing, { name: decodeHtml(wp.name), price, img: keepImg, imgs, description, is_new: wp.featured, wc_id: wp.id });
+        Object.assign(existing, { name: decodeHtml(wp.name), price, img: keepImg, imgs, description, cat, genre, is_new: wp.featured, wc_id: wp.id });
         updated++;
       } else {
         const maxId = db.products.reduce((m, p) => Math.max(m, p.id), 0);
         db.products.push({
           id: maxId + 1,
           wc_id: wp.id,
-          brand: decodeHtml(wp.brands?.[0]?.name || wp.tags?.[0]?.name || 'Azzabi Optic'),
+          brand,
           name: decodeHtml(wp.name),
           cat,
-          genre: 'unisexe',
+          genre,
           price,
           img,
           imgs,

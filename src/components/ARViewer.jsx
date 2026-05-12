@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import * as THREE from 'three';
 import { X, Camera, RotateCcw, Move } from 'lucide-react';
 import { useARCamera } from '../hooks/useARCamera';
 
@@ -95,13 +96,140 @@ function glassesStyle(pose, cW, cH) {
   };
 }
 
-function GlassesOverlay({ src, style }) {
+function Glasses3DOverlay({ product, style }) {
+  const mountRef = useRef(null);
+
+  useEffect(() => {
+    const mount = mountRef.current;
+    if (!mount) return undefined;
+
+    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setClearColor(0x000000, 0);
+    renderer.domElement.style.width = '100%';
+    renderer.domElement.style.height = '100%';
+    renderer.domElement.style.display = 'block';
+    mount.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.OrthographicCamera(-3.2, 3.2, 1.1, -1.1, 0.1, 20);
+    camera.position.set(0, 0, 8);
+    camera.lookAt(0, 0, 0);
+
+    scene.add(new THREE.AmbientLight(0xffffff, 1.8));
+    const key = new THREE.DirectionalLight(0xffffff, 2.2);
+    key.position.set(-2.5, 2.5, 5);
+    scene.add(key);
+
+    const frameColor = new THREE.Color(product?.hue?.[0] || '#111111');
+    const frameLight = new THREE.Color(product?.hue?.[1] || '#333333');
+    const accentColor = new THREE.Color(product?.accent || C.gold);
+    const isSun = product?.cat === 'soleil';
+
+    const frameMat = new THREE.MeshStandardMaterial({
+      color: frameColor,
+      roughness: 0.38,
+      metalness: 0.12,
+      emissive: frameLight,
+      emissiveIntensity: 0.08,
+    });
+    const accentMat = new THREE.MeshStandardMaterial({
+      color: accentColor,
+      roughness: 0.22,
+      metalness: 0.65,
+    });
+    const lensMat = new THREE.MeshPhysicalMaterial({
+      color: isSun ? 0x111318 : 0xddeeff,
+      transparent: true,
+      opacity: isSun ? 0.42 : 0.18,
+      roughness: 0.08,
+      metalness: 0,
+      transmission: 0.25,
+    });
+
+    const group = new THREE.Group();
+    scene.add(group);
+
+    const ringGeo = new THREE.TorusGeometry(0.86, 0.075, 18, 96);
+    const lensGeo = new THREE.CircleGeometry(0.78, 96);
+    const bridgeGeo = new THREE.CapsuleGeometry(0.07, 0.72, 8, 18);
+    const hingeGeo = new THREE.BoxGeometry(0.2, 0.14, 0.16);
+
+    const leftRing = new THREE.Mesh(ringGeo, frameMat);
+    leftRing.position.x = -1.05;
+    leftRing.scale.set(1.05, 0.58, 0.18);
+    group.add(leftRing);
+
+    const rightRing = leftRing.clone();
+    rightRing.position.x = 1.05;
+    group.add(rightRing);
+
+    const leftLens = new THREE.Mesh(lensGeo, lensMat);
+    leftLens.position.set(-1.05, 0, -0.04);
+    leftLens.scale.set(1.03, 0.56, 1);
+    group.add(leftLens);
+
+    const rightLens = leftLens.clone();
+    rightLens.position.x = 1.05;
+    group.add(rightLens);
+
+    const bridge = new THREE.Mesh(bridgeGeo, frameMat);
+    bridge.rotation.z = Math.PI / 2;
+    bridge.scale.set(1, 1, 0.8);
+    group.add(bridge);
+
+    const leftHinge = new THREE.Mesh(hingeGeo, accentMat);
+    leftHinge.position.set(-2.02, 0.02, 0.02);
+    group.add(leftHinge);
+
+    const rightHinge = leftHinge.clone();
+    rightHinge.position.x = 2.02;
+    group.add(rightHinge);
+
+    const shineGeo = new THREE.PlaneGeometry(0.58, 0.05);
+    const shineMat = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.34,
+      depthWrite: false,
+    });
+    [-1.12, 0.98].forEach((x) => {
+      const shine = new THREE.Mesh(shineGeo, shineMat);
+      shine.position.set(x, 0.28, 0.04);
+      shine.rotation.z = -0.35;
+      group.add(shine);
+    });
+
+    group.rotation.x = -0.08;
+    group.rotation.y = 0.14;
+
+    const resize = () => {
+      const rect = mount.getBoundingClientRect();
+      renderer.setSize(Math.max(1, rect.width), Math.max(1, rect.height), false);
+      camera.updateProjectionMatrix();
+      renderer.render(scene, camera);
+    };
+
+    const observer = new ResizeObserver(resize);
+    observer.observe(mount);
+    resize();
+
+    return () => {
+      observer.disconnect();
+      mount.removeChild(renderer.domElement);
+      [ringGeo, lensGeo, bridgeGeo, hingeGeo, shineGeo].forEach((geo) => geo.dispose());
+      [frameMat, accentMat, lensMat, shineMat].forEach((mat) => mat.dispose());
+      renderer.dispose();
+    };
+  }, [product]);
+
   return (
-    <img src={src} alt="" draggable={false} style={{
+    <div ref={mountRef} style={{
       ...style,
+      aspectRatio: '3 / 1',
       height: 'auto',
-      WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 16%, black 84%, transparent 100%)',
-      maskImage: 'linear-gradient(to right, transparent 0%, black 16%, black 84%, transparent 100%)',
+      mixBlendMode: 'normal',
+      filter: 'drop-shadow(0 4px 5px rgba(0,0,0,0.24))',
     }} />
   );
 }
@@ -222,9 +350,9 @@ export default function ARViewer({ product, onClose }) {
                style={{ transform: 'scaleX(-1)', display: isLive ? 'block' : 'none' }}
                playsInline muted autoPlay />
 
-        {/* Glasses — 3D temple effect */}
+        {/* Glasses */}
         {isLive && glassesOverlayStyle && (
-          <GlassesOverlay src={product?.img} style={glassesOverlayStyle} />
+          <Glasses3DOverlay product={product} style={glassesOverlayStyle} />
         )}
 
         {/* START */}

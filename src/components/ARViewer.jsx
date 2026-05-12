@@ -96,6 +96,17 @@ function glassesStyle(pose, cW, cH) {
   };
 }
 
+function Glasses2DOverlay({ src, style }) {
+  return (
+    <img src={src} alt="" draggable={false} style={{
+      ...style,
+      height: 'auto',
+      WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 16%, black 84%, transparent 100%)',
+      maskImage: 'linear-gradient(to right, transparent 0%, black 16%, black 84%, transparent 100%)',
+    }} />
+  );
+}
+
 function Glasses3DOverlay({ product, style }) {
   const mountRef = useRef(null);
 
@@ -243,6 +254,7 @@ export default function ARViewer({ product, onClose }) {
   const [started, setStarted] = useState(false);
   const [pos, setPos] = useState({ x: 50, y: 38 });
   const [scale, setScale] = useState(1.0);
+  const [arMode, setArMode] = useState('2d');
   const [videoDims, setVideoDims] = useState({ w: 0, h: 0 });
 
   const hasFaces = faces.length > 0;
@@ -332,9 +344,27 @@ export default function ARViewer({ product, onClose }) {
             {product?.brand} — {product?.name}
           </div>
         </div>
-        <button onClick={handleClose} className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.1)' }}>
-          <X size={18} color="white" />
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="flex rounded-full p-1" style={{ background: 'rgba(255,255,255,0.1)' }}>
+            {['2d', '3d'].map(mode => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setArMode(mode)}
+                className="px-3 py-1.5 rounded-full text-[10px] font-semibold tracking-[0.16em]"
+                style={{
+                  background: arMode === mode ? C.gold : 'transparent',
+                  color: arMode === mode ? C.ink : 'rgba(255,255,255,0.7)',
+                }}
+              >
+                {mode.toUpperCase()}
+              </button>
+            ))}
+          </div>
+          <button onClick={handleClose} className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.1)' }}>
+            <X size={18} color="white" />
+          </button>
+        </div>
       </div>
 
       {/* Camera area */}
@@ -351,7 +381,10 @@ export default function ARViewer({ product, onClose }) {
                playsInline muted autoPlay />
 
         {/* Glasses */}
-        {isLive && glassesOverlayStyle && (
+        {isLive && glassesOverlayStyle && arMode === '2d' && (
+          <Glasses2DOverlay src={product?.img} style={glassesOverlayStyle} />
+        )}
+        {isLive && glassesOverlayStyle && arMode === '3d' && (
           <Glasses3DOverlay product={product} style={glassesOverlayStyle} />
         )}
 

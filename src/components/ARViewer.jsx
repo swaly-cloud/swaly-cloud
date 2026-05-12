@@ -68,7 +68,7 @@ function getFacePose(detection, vW, vH, cW, cH) {
   const eyeSpan = Math.hypot(rightEye.x - leftEye.x, rightEye.y - leftEye.y);
   const rotation = Math.atan2(rightEye.y - leftEye.y, rightEye.x - leftEye.x) * 180 / Math.PI;
   const faceWidth = faceBox?.width || eyeSpan * 2.15;
-  const width = clamp(Math.max(eyeSpan * 2.35, faceWidth * 0.76), cW * 0.24, cW * 0.92);
+  const width = clamp(Math.max(eyeSpan * 2.85, faceWidth * 0.9), cW * 0.32, cW * 0.98);
 
   return {
     centerX: faceBox ? lerp(eyeCenterX, faceBox.centerX, 0.18) : eyeCenterX,
@@ -95,33 +95,14 @@ function glassesStyle(pose, cW, cH) {
   };
 }
 
-// Renders the front frame only: product photos often include temples/arms,
-// which look wrong when projected across the user's cheeks.
 function GlassesOverlay({ src, style }) {
   return (
-    <div style={{
+    <img src={src} alt="" draggable={false} style={{
       ...style,
-      overflow: 'hidden',
-      aspectRatio: '2.7 / 1',
-      mixBlendMode: 'multiply',
-      WebkitMaskImage: 'linear-gradient(to right, transparent 0%, transparent 18%, black 34%, black 66%, transparent 82%, transparent 100%)',
-      maskImage: 'linear-gradient(to right, transparent 0%, transparent 18%, black 34%, black 66%, transparent 82%, transparent 100%)',
-    }}>
-      <img
-        src={src}
-        alt=""
-        draggable={false}
-        style={{
-          width: '150%',
-          height: '100%',
-          maxWidth: 'none',
-          marginLeft: '-25%',
-          objectFit: 'contain',
-          pointerEvents: 'none',
-          userSelect: 'none',
-        }}
-      />
-    </div>
+      height: 'auto',
+      WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 16%, black 84%, transparent 100%)',
+      maskImage: 'linear-gradient(to right, transparent 0%, black 16%, black 84%, transparent 100%)',
+    }} />
   );
 }
 

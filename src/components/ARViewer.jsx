@@ -95,14 +95,33 @@ function glassesStyle(pose, cW, cH) {
   };
 }
 
-// Renders glasses with arms faded out via a side gradient mask.
+// Renders the front frame only: product photos often include temples/arms,
+// which look wrong when projected across the user's cheeks.
 function GlassesOverlay({ src, style }) {
   return (
-    <img src={src} alt="" draggable={false} style={{
+    <div style={{
       ...style,
-      WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 22%, black 78%, transparent 100%)',
-      maskImage: 'linear-gradient(to right, transparent 0%, black 22%, black 78%, transparent 100%)',
-    }} />
+      overflow: 'hidden',
+      aspectRatio: '2.7 / 1',
+      mixBlendMode: 'multiply',
+      WebkitMaskImage: 'linear-gradient(to right, transparent 0%, transparent 18%, black 34%, black 66%, transparent 82%, transparent 100%)',
+      maskImage: 'linear-gradient(to right, transparent 0%, transparent 18%, black 34%, black 66%, transparent 82%, transparent 100%)',
+    }}>
+      <img
+        src={src}
+        alt=""
+        draggable={false}
+        style={{
+          width: '150%',
+          height: '100%',
+          maxWidth: 'none',
+          marginLeft: '-25%',
+          objectFit: 'contain',
+          pointerEvents: 'none',
+          userSelect: 'none',
+        }}
+      />
+    </div>
   );
 }
 

@@ -4,37 +4,91 @@ import { useARCamera } from '../hooks/useARCamera';
 
 const C = { ink: '#0A0A0A', gold: '#D4AF37' };
 
-// Position glasses using MediaPipe eye keypoints (index 0 = left eye, 1 = right eye).
-// Keypoints are normalized (0-1). Video is displayed with object-cover + CSS scaleX(-1) mirror.
-function glassesStyle(detection, vW, vH, cW, cH) {
+const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+const lerp = (from, to, amount) => from + (to - from) * amount;
+const lerpAngle = (from, to, amount) => {
+  let delta = to - from;
+  while (delta > 180) delta -= 360;
+  while (delta < -180) delta += 360;
+  return from + delta * amount;
+};
+
+function mapVideoPoint(point, vW, vH, scale, cropX, cropY, cW) {
+  const rawX = point.x <= 1 ? point.x * vW : point.x;
+  const rawY = point.y <= 1 ? point.y * vH : point.y;
+  const x = rawX * scale - cropX;
+  const y = rawY * scale - cropY;
+  return { x: cW - x, y };
+}
+
+function mapFaceBox(box, vW, vH, scale, cropX, cropY, cW) {
+  if (!box) return null;
+  const originX = box.originX ?? box.xMin ?? box.x ?? 0;
+  const originY = box.originY ?? box.yMin ?? box.y ?? 0;
+  const width = box.width ?? ((box.xMax ?? 0) - originX);
+  const height = box.height ?? ((box.yMax ?? 0) - originY);
+  if (!width || !height) return null;
+
+  const topLeft = mapVideoPoint({ x: originX, y: originY }, vW, vH, scale, cropX, cropY, cW);
+  const bottomRight = mapVideoPoint({ x: originX + width, y: originY + height }, vW, vH, scale, cropX, cropY, cW);
+  return {
+    centerX: (topLeft.x + bottomRight.x) / 2,
+    centerY: (topLeft.y + bottomRight.y) / 2,
+    width: Math.abs(topLeft.x - bottomRight.x),
+    height: Math.abs(bottomRight.y - topLeft.y),
+  };
+}
+
+function getFacePose(detection, vW, vH, cW, cH) {
   if (!detection || !vW || !vH || !cW || !cH) return null;
 
   const kp = detection.keypoints;
-  if (!kp || kp.length < 2) return null;
-
   const scale = Math.max(cW / vW, cH / vH);
   const cropX = (vW * scale - cW) / 2;
   const cropY = (vH * scale - cH) / 2;
+  const faceBox = mapFaceBox(detection.boundingBox, vW, vH, scale, cropX, cropY, cW);
 
-  const lx = kp[0].x * vW * scale - cropX;
-  const rx = kp[1].x * vW * scale - cropX;
-  const ly = kp[0].y * vH * scale - cropY;
-  const ry = kp[1].y * vH * scale - cropY;
+  if (!kp || kp.length < 2) {
+    if (!faceBox) return null;
+    return {
+      centerX: faceBox.centerX,
+      centerY: faceBox.centerY - faceBox.height * 0.11,
+      width: faceBox.width * 0.72,
+      rotation: 0,
+    };
+  }
 
-  const lxM = cW - lx;
-  const rxM = cW - rx;
+  const eyeA = mapVideoPoint(kp[0], vW, vH, scale, cropX, cropY, cW);
+  const eyeB = mapVideoPoint(kp[1], vW, vH, scale, cropX, cropY, cW);
+  const leftEye = eyeA.x < eyeB.x ? eyeA : eyeB;
+  const rightEye = eyeA.x < eyeB.x ? eyeB : eyeA;
 
-  const centerX = (lxM + rxM) / 2;
-  const centerY = (ly + ry) / 2;
-  const eyeSpanPx = Math.abs(lxM - rxM);
-  const glassW = eyeSpanPx * 2.4;
+  const eyeCenterX = (leftEye.x + rightEye.x) / 2;
+  const eyeCenterY = (leftEye.y + rightEye.y) / 2;
+  const eyeSpan = Math.hypot(rightEye.x - leftEye.x, rightEye.y - leftEye.y);
+  const rotation = Math.atan2(rightEye.y - leftEye.y, rightEye.x - leftEye.x) * 180 / Math.PI;
+  const faceWidth = faceBox?.width || eyeSpan * 2.15;
+  const width = clamp(Math.max(eyeSpan * 2.35, faceWidth * 0.76), cW * 0.24, cW * 0.92);
+
+  return {
+    centerX: faceBox ? lerp(eyeCenterX, faceBox.centerX, 0.18) : eyeCenterX,
+    centerY: faceBox ? lerp(eyeCenterY, faceBox.centerY - faceBox.height * 0.1, 0.12) : eyeCenterY,
+    width,
+    rotation: clamp(rotation, -35, 35),
+  };
+}
+
+// Position glasses from the displayed, mirrored face pose.
+function glassesStyle(pose, cW, cH) {
+  if (!pose || !cW || !cH) return null;
 
   return {
     position: 'absolute',
-    left: `${(centerX / cW) * 100}%`,
-    top:  `${(centerY / cH) * 100}%`,
-    width:`${(glassW  / cW) * 100}%`,
-    transform: 'translate(-50%, -50%)',
+    left: `${(pose.centerX / cW) * 100}%`,
+    top:  `${(pose.centerY / cH) * 100}%`,
+    width:`${(pose.width / cW) * 100}%`,
+    transform: `translate(-50%, -50%) rotate(${pose.rotation}deg)`,
+    transformOrigin: '50% 50%',
     mixBlendMode: 'multiply',
     pointerEvents: 'none',
     userSelect: 'none',
@@ -57,6 +111,7 @@ export default function ARViewer({ product, onClose }) {
   const containerRef = useRef(null);
   const dragRef = useRef(null);
   const pinchRef = useRef(null);
+  const poseRef = useRef(null);
   const [started, setStarted] = useState(false);
   const [pos, setPos] = useState({ x: 50, y: 38 });
   const [scale, setScale] = useState(1.0);
@@ -108,8 +163,31 @@ export default function ARViewer({ product, onClose }) {
 
   const onTouchEnd = useCallback(() => { dragRef.current = null; pinchRef.current = null; }, []);
 
-  const glassesOverlayStyle = hasFaces && videoDims.w > 0
-    ? glassesStyle(faces[0], videoDims.w, videoDims.h, containerRef.current?.offsetWidth, containerRef.current?.offsetHeight)
+  let smoothedPose = null;
+  if (hasFaces && videoDims.w > 0) {
+    const targetPose = getFacePose(
+      faces[0],
+      videoDims.w,
+      videoDims.h,
+      containerRef.current?.offsetWidth,
+      containerRef.current?.offsetHeight
+    );
+    if (targetPose) {
+      const previousPose = poseRef.current;
+      smoothedPose = previousPose ? {
+        centerX: lerp(previousPose.centerX, targetPose.centerX, 0.38),
+        centerY: lerp(previousPose.centerY, targetPose.centerY, 0.38),
+        width: lerp(previousPose.width, targetPose.width, 0.32),
+        rotation: lerpAngle(previousPose.rotation, targetPose.rotation, 0.45),
+      } : targetPose;
+      poseRef.current = smoothedPose;
+    }
+  } else {
+    poseRef.current = null;
+  }
+
+  const glassesOverlayStyle = smoothedPose
+    ? glassesStyle(smoothedPose, containerRef.current?.offsetWidth, containerRef.current?.offsetHeight)
     : { position: 'absolute', left: `${pos.x}%`, top: `${pos.y}%`,
         width: `${70 * scale}%`, transform: 'translate(-50%, -50%)',
         mixBlendMode: 'multiply', pointerEvents: 'none', userSelect: 'none' };

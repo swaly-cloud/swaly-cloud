@@ -95,68 +95,33 @@ function glassesStyle(pose, cW, cH) {
   };
 }
 
-// AR uses a clean front-frame overlay instead of catalog photos because those
-// photos often include temples/arms that project across the user's cheeks.
-function GlassesOverlay({ product, style }) {
-  const frame = product?.hue?.[0] || '#111111';
-  const frameLight = product?.hue?.[1] || '#333333';
-  const accent = product?.accent || C.gold;
-  const isSun = product?.cat === 'soleil';
-
+// Renders the front frame only: product photos often include temples/arms,
+// which look wrong when projected across the user's cheeks.
+function GlassesOverlay({ src, style }) {
   return (
-    <svg
-      viewBox="0 0 280 92"
-      aria-hidden="true"
-      focusable="false"
-      style={{
-        ...style,
-        aspectRatio: '3.04 / 1',
-        overflow: 'visible',
-        filter: 'drop-shadow(0 4px 5px rgba(0,0,0,0.2))',
-      }}
-    >
-      <defs>
-        <linearGradient id="arFrame" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor={frameLight} />
-          <stop offset="100%" stopColor={frame} />
-        </linearGradient>
-        <linearGradient id="arLens" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor={isSun ? '#1B1D21' : '#F8FBFF'} stopOpacity={isSun ? 0.55 : 0.22} />
-          <stop offset="100%" stopColor={isSun ? '#030405' : '#FFFFFF'} stopOpacity={isSun ? 0.38 : 0.08} />
-        </linearGradient>
-      </defs>
-      <path
-        d="M28 43C31 21 47 12 78 14c27 2 45 17 48 38 2 17-9 28-34 31-31 4-56-2-67-17-5-7-6-15-3-23Z"
-        fill="url(#arLens)"
-        stroke="url(#arFrame)"
-        strokeWidth="10"
-        strokeLinejoin="round"
+    <div style={{
+      ...style,
+      overflow: 'hidden',
+      aspectRatio: '2.7 / 1',
+      mixBlendMode: 'multiply',
+      WebkitMaskImage: 'linear-gradient(to right, transparent 0%, transparent 18%, black 34%, black 66%, transparent 82%, transparent 100%)',
+      maskImage: 'linear-gradient(to right, transparent 0%, transparent 18%, black 34%, black 66%, transparent 82%, transparent 100%)',
+    }}>
+      <img
+        src={src}
+        alt=""
+        draggable={false}
+        style={{
+          width: '150%',
+          height: '100%',
+          maxWidth: 'none',
+          marginLeft: '-25%',
+          objectFit: 'contain',
+          pointerEvents: 'none',
+          userSelect: 'none',
+        }}
       />
-      <path
-        d="M252 43c-3-22-19-31-50-29-27 2-45 17-48 38-2 17 9 28 34 31 31 4 56-2 67-17 5-7 6-15 3-23Z"
-        fill="url(#arLens)"
-        stroke="url(#arFrame)"
-        strokeWidth="10"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M122 47c9-8 27-8 36 0"
-        fill="none"
-        stroke="url(#arFrame)"
-        strokeWidth="9"
-        strokeLinecap="round"
-      />
-      <path
-        d="M80 19c14 4 25 12 31 24M200 19c-14 4-25 12-31 24"
-        fill="none"
-        stroke="#FFFFFF"
-        strokeOpacity="0.23"
-        strokeWidth="3"
-        strokeLinecap="round"
-      />
-      <circle cx="126" cy="51" r="3.2" fill={accent} opacity="0.85" />
-      <circle cx="154" cy="51" r="3.2" fill={accent} opacity="0.85" />
-    </svg>
+    </div>
   );
 }
 
@@ -276,9 +241,9 @@ export default function ARViewer({ product, onClose }) {
                style={{ transform: 'scaleX(-1)', display: isLive ? 'block' : 'none' }}
                playsInline muted autoPlay />
 
-        {/* Glasses */}
+        {/* Glasses — 3D temple effect */}
         {isLive && glassesOverlayStyle && (
-          <GlassesOverlay product={product} style={glassesOverlayStyle} />
+          <GlassesOverlay src={product?.img} style={glassesOverlayStyle} />
         )}
 
         {/* START */}

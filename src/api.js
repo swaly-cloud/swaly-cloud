@@ -1,12 +1,31 @@
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
-function getToken() {
+function getAdminToken() {
   return localStorage.getItem('azzabi_admin_token');
+}
+
+function getUserToken() {
+  return localStorage.getItem('azzabi_user_token');
 }
 
 async function request(path, options = {}) {
   const headers = { 'Content-Type': 'application/json', ...options.headers };
-  const token = getToken();
+  const adminToken = getAdminToken();
+  const userToken = getUserToken();
+  const token = adminToken || userToken;
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const res = await fetch(`${BASE}${path}`, { ...options, headers });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Erreur réseau' }));
+    throw new Error(err.error || 'Erreur');
+  }
+  return res.json();
+}
+
+async function userRequest(path, options = {}) {
+  const headers = { 'Content-Type': 'application/json', ...options.headers };
+  const token = getUserToken();
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
   const res = await fetch(`${BASE}${path}`, { ...options, headers });
@@ -34,8 +53,15 @@ export const api = {
     list:   ()     => request('/appointments'),
   },
   auth: {
-    login: (email, password) => request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
-    me:    () => request('/auth/me'),
+    login:        (email, password) => request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
+    me:           () => request('/auth/me'),
+    userRegister: (name, email, password) => userRequest('/auth/user/register', { method: 'POST', body: JSON.stringify({ name, email, password }) }),
+    userLogin:    (email, password)       => userRequest('/auth/user/login',    { method: 'POST', body: JSON.stringify({ email, password }) }),
+    userMe:       () => userRequest('/auth/user/me'),
+  },
+  user: {
+    orders:       () => userRequest('/users/me/orders'),
+    appointments: () => userRequest('/users/me/appointments'),
   },
   admin: {
     dashboard: () => request('/admin/dashboard'),
@@ -59,5 +85,8 @@ export const api = {
   },
 };
 
-export function saveToken(token) { localStorage.setItem('azzabi_admin_token', token); }
-export function clearToken()     { localStorage.removeItem('azzabi_admin_token'); }
+export function saveToken(token)     { localStorage.setItem('azzabi_admin_token', token); }
+export function clearToken()         { localStorage.removeItem('azzabi_admin_token'); }
+export function saveUserToken(token) { localStorage.setItem('azzabi_user_token', token); }
+export function clearUserToken()     { localStorage.removeItem('azzabi_user_token'); }
+export { getUserToken };

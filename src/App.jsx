@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { api } from './api';
+import { api, saveUserToken, clearUserToken, getUserToken } from './api';
 import AdminPanel from './AdminPanel';
 import ARViewer from './components/ARViewer';
 import {
@@ -629,11 +629,78 @@ return (
 );
 }
 
+// ─── AUTH FORM (login / register) ──────────────────────────────────
+function AuthForm({ onSuccess }) {
+const [mode, setMode] = useState('login');
+const [name, setName] = useState('');
+const [email, setEmail] = useState('');
+const [password, setPassword] = useState('');
+const [error, setError] = useState('');
+const [loading, setLoading] = useState(false);
+
+const submit = async () => {
+  setError('');
+  setLoading(true);
+  try {
+    let result;
+    if (mode === 'login') {
+      result = await api.auth.userLogin(email, password);
+    } else {
+      result = await api.auth.userRegister(name, email, password);
+    }
+    onSuccess(result.user, result.token);
+  } catch (e) {
+    setError(e.message);
+  } finally {
+    setLoading(false);
+  }
+};
+
+return (
+<div className="pb-32" style={{ background:C.bg }}>
+<div className="px-5 pt-6 pb-4">
+<div className="text-[10px] tracking-[0.3em] font-semibold mb-1" style={{ color:C.mute }}>PROFIL</div>
+<h2 className="text-[34px] leading-tight" style={{ fontFamily:'Fraunces,serif', fontWeight:300, color:C.ink }}>Mon compte</h2>
+</div>
+<div className="px-5">
+<div className="flex mb-6" style={{ borderBottom:`1px solid ${C.line}` }}>
+{['login','register'].map(m=>(
+<button key={m} onClick={()=>{setMode(m);setError('');}} className="flex-1 pb-3 text-[11px] tracking-[0.2em] font-semibold border-b-2 transition-colors" style={{ borderColor:mode===m?C.gold:'transparent', color:mode===m?C.ink:C.mute }}>
+{m==='login' ? 'CONNEXION' : 'CRÉER UN COMPTE'}
+</button>
+))}
+</div>
+
+{error && <div className="mb-4 px-4 py-3 text-[12px]" style={{ background:`${C.error}18`, color:C.error }}>{error}</div>}
+
+<div className="space-y-3">
+{mode === 'register' && (
+<input value={name} onChange={e=>setName(e.target.value)} placeholder="Nom complet *" className="w-full px-4 py-3.5 text-[13px] outline-none" style={{ background:C.bgSoft, border:`1px solid ${C.line}`, color:C.ink }}/>
+)}
+<input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="Email *" className="w-full px-4 py-3.5 text-[13px] outline-none" style={{ background:C.bgSoft, border:`1px solid ${C.line}`, color:C.ink }}/>
+<input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Mot de passe *" className="w-full px-4 py-3.5 text-[13px] outline-none" style={{ background:C.bgSoft, border:`1px solid ${C.line}`, color:C.ink }} onKeyDown={e=>e.key==='Enter'&&submit()}/>
+</div>
+
+<button onClick={submit} disabled={loading} className="w-full mt-5 py-4 text-[11px] tracking-[0.22em] font-semibold flex items-center justify-center" style={{ background:C.ink, color:'#FFF', opacity:loading?0.7:1 }}>
+{loading ? '…' : (mode==='login' ? 'SE CONNECTER' : 'CRÉER MON COMPTE')}
+</button>
+
+<div className="mt-10 text-center pb-6">
+<div className="flex justify-center mb-3"><AzzabiMark size={26}/></div>
+<div className="text-[9px] tracking-[0.4em] font-semibold" style={{ color:C.mute }}>— EST. 2010 — TUNIS —</div>
+</div>
+</div>
+</div>
+);
+}
+
 // ─── PROFILE SCREEN ────────────────────────────────────────────────
-function ProfileScreen({ ccy, wished, toggleWish, onProduct, onCart, orders, appointments, onAdminOpen }) {
+function ProfileScreen({ ccy, wished, toggleWish, onProduct, onCart, orders, appointments, onAdminOpen, currentUser, onUserLogin, onUserLogout }) {
 const [view, setView] = useState('main');
 const wishedProducts = PRODUCTS.filter(p=>wished.includes(p.id));
 const statusColor = { 'confirmé':C.gold, 'en préparation':'#4A90E2', 'livré':C.success, 'annulé':C.error };
+
+if (!currentUser) return <AuthForm onSuccess={onUserLogin}/>;
 
 if (view === 'favorites') return (
 <div className="pb-32" style={{ background:C.bg }}>
@@ -665,6 +732,8 @@ if (view === 'appointments') return (
 </div>
 );
 
+const initial = currentUser.name ? currentUser.name[0].toUpperCase() : '?';
+
 return (
 <div className="pb-32" style={{ background:C.bg }}>
 <div className="px-5 pt-6 pb-4"><div className="text-[10px] tracking-[0.3em] font-semibold mb-1" style={{ color:C.mute }}>PROFIL</div><h2 className="text-[34px] leading-tight" style={{ fontFamily:'Fraunces,serif', fontWeight:300, color:C.ink }}>Mon compte</h2></div>
@@ -672,8 +741,12 @@ return (
 <div className="p-5 mb-6 relative overflow-hidden" style={{ background:C.ink, color:'#FFF' }}>
 <div className="absolute top-0 right-0 w-32 h-32" style={{ background:'radial-gradient(circle at top right,rgba(212,175,55,0.3) 0%,transparent 70%)' }}/>
 <div className="relative flex items-center gap-4">
-<div className="w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0" style={{ background:goldGrad }}><span className="text-[22px]" style={{ fontFamily:'Fraunces,serif', color:C.ink }}>A</span></div>
-<div className="flex-1"><div className="text-[16px]" style={{ fontFamily:'Fraunces,serif' }}>Client Azzabi</div><div className="text-[10px] tracking-[0.2em] font-semibold opacity-70">MEMBRE 2024</div></div>
+<div className="w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0" style={{ background:goldGrad }}><span className="text-[22px]" style={{ fontFamily:'Fraunces,serif', color:C.ink }}>{initial}</span></div>
+<div className="flex-1">
+<div className="text-[16px]" style={{ fontFamily:'Fraunces,serif' }}>{currentUser.name}</div>
+<div className="text-[10px] tracking-[0.2em] font-semibold opacity-70">{currentUser.email}</div>
+</div>
+<button onClick={onUserLogout} className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] tracking-[0.1em] font-semibold" style={{ background:'rgba(255,255,255,0.12)', color:'rgba(255,255,255,0.8)' }}><LogOut size={12}/>SORTIR</button>
 </div>
 </div>
 <div className="grid grid-cols-3 gap-2 mb-7">
@@ -744,6 +817,7 @@ const [apiReady, setApiReady] = useState(false);
 const [catFilter, setCatFilter] = useState('all');
 const [genreFilter, setGenreFilter] = useState('all');
 const [showAR, setShowAR] = useState(false);
+const [currentUser, setCurrentUser] = useState(null);
 
 const fetchProducts = useCallback(() => {
   api.products.list().then(data => {
@@ -755,6 +829,38 @@ const fetchProducts = useCallback(() => {
 }, []);
 
 useEffect(() => { fetchProducts(); }, [fetchProducts]);
+
+useEffect(() => {
+  if (!getUserToken()) return;
+  api.auth.userMe()
+    .then(({ user }) => {
+      setCurrentUser(user);
+      return Promise.all([api.user.orders(), api.user.appointments()]);
+    })
+    .then(([userOrders, userAppts]) => {
+      setOrders(userOrders);
+      setAppointments(userAppts);
+    })
+    .catch(() => { clearUserToken(); });
+}, []);
+
+const handleUserLogin = useCallback((user, token) => {
+  saveUserToken(token);
+  setCurrentUser(user);
+  Promise.all([api.user.orders(), api.user.appointments()])
+    .then(([userOrders, userAppts]) => {
+      setOrders(userOrders);
+      setAppointments(userAppts);
+    })
+    .catch(() => {});
+}, []);
+
+const handleUserLogout = useCallback(() => {
+  clearUserToken();
+  setCurrentUser(null);
+  setOrders([]);
+  setAppointments([]);
+}, []);
 
 const dir = lang==='ar' ? 'rtl' : 'ltr';
 
@@ -829,7 +935,7 @@ return (
 <div key={tab} className="fade-in" dir={dir}>
 {tab==='diaspora' && <DiasporaScreen ccy={ccy} lang={lang}/>}
 {tab==='appointment' && <AppointmentScreen onBook={handleBook}/>}
-{tab==='profile' && <ProfileScreen ccy={ccy} wished={wished} toggleWish={toggleWish} onProduct={setSelectedProduct} onCart={addToCart} orders={orders} appointments={appointments} onAdminOpen={()=>setShowAdmin(true)}/>}
+{tab==='profile' && <ProfileScreen ccy={ccy} wished={wished} toggleWish={toggleWish} onProduct={setSelectedProduct} onCart={addToCart} orders={orders} appointments={appointments} onAdminOpen={()=>setShowAdmin(true)} currentUser={currentUser} onUserLogin={handleUserLogin} onUserLogout={handleUserLogout}/>}
 {tab==='home' && <div className="pb-32" style={{ background:C.bg }}><div className="px-6 pt-10 pb-12"><div className="flex items-center gap-2 text-[10px] tracking-[0.3em] font-semibold mb-6" style={{ color:C.mute }}><span className="w-6 h-px" style={{ background:C.gold }}/>OPTICIEN DEPUIS 2010</div><h1 className="text-[58px] leading-[0.92] mb-6" style={{ fontFamily:'Fraunces,serif', fontWeight:300, color:C.ink, letterSpacing:'-0.02em' }}>L'art de voir.</h1><p className="text-[14px] leading-relaxed mb-8 max-w-[28ch]" style={{ color:C.inkSoft }}>Maison opticienne tunisienne. La Marsa & Aïn Zaghouan. Sélection rigoureuse de Fendi, Celine, Dior, Tom Ford, Persol, Ray-Ban.</p><button onClick={()=>setTab('catalog')} className="inline-flex items-center gap-3 px-5 py-3.5 text-[11px] tracking-[0.2em] font-semibold" style={{ background:C.ink, color:'#FFF' }}>DÉCOUVRIR LA COLLECTION<ArrowUpRight size={14}/></button></div><div className="px-5 mb-12"><div className="relative overflow-hidden aspect-[3/2]"><img src="https://azzabioptic.com/wp-content/uploads/2025/09/desktop_fr-FR.webp" alt="Azzabi Optic boutique" className="w-full h-full object-cover" onError={e=>{e.target.src='https://picsum.photos/seed/azzabi-optic-boutique/600/400';}}/><div className="absolute bottom-0 left-0 right-0 p-4" style={{ background:'linear-gradient(transparent,rgba(0,0,0,0.6))' }}><div className="text-[10px] tracking-[0.3em] font-semibold text-white opacity-80">LA MARSA · AÏN ZAGHOUAN</div></div></div></div><div className="px-5 mb-12"><div className="text-[10px] tracking-[0.3em] font-semibold mb-1" style={{ color:C.mute }}>01 — COLLECTION</div><h3 className="text-[26px] mb-5" style={{ fontFamily:'Fraunces,serif', color:C.ink }}>Maisons d'exception</h3><div className="flex gap-4 overflow-x-auto pb-2 px-5 scrollbar-hide">{featuredProducts.map(p=>(<div key={p.id} className="w-[170px] flex-shrink-0"><ProductCard p={p} ccy={ccy} onTap={setSelectedProduct} onWish={toggleWish} wished={wished.includes(p.id)} onCart={addToCart}/></div>))}</div></div><div className="px-5 py-4 flex items-center gap-4"><span className="h-px flex-1" style={{ background:C.line }}/><AzzabiMark size={26}/><span className="h-px flex-1" style={{ background:C.line }}/></div><div className="px-5 pt-8 mb-12"><div className="text-[10px] tracking-[0.3em] font-semibold mb-1" style={{ color:C.mute }}>02 — JOURNAL</div><h3 className="text-[26px] mb-5" style={{ fontFamily:'Fraunces,serif', color:C.ink }}>Notes d'opticien</h3>{[{kicker:'GUIDE', title:'Verres progressifs Varilux : ce qu\'il faut savoir', read:'6 min', img:'https://azzabioptic.com/wp-content/uploads/2026/04/Gemini_Generated_Image_knp2g7knp2g7knp2.png', url:'https://azzabioptic.com'}, {kicker:'TENDANCE', title:'Lunettes de soleil 2026 : les formes qui s\'imposent', read:'4 min', img:'https://azzabioptic.com/wp-content/uploads/2025/09/desktop_fr-FR.webp', url:'https://azzabioptic.com'}, {kicker:'EXPERTISE', title:'Lentilles de couleur : choisir une teinte naturelle', read:'5 min', img:'https://picsum.photos/seed/contact-lenses-color-azzabi/400/280', url:'https://azzabioptic.com'}].map((a,i)=>(<a key={i} href={a.url} target="_blank" rel="noreferrer" className="block py-5 flex items-start gap-4" style={{ borderTop:`1px solid ${C.line}` }}><div className="flex-1 min-w-0"><div className="text-[9px] tracking-[0.25em] font-semibold mb-1.5" style={{ color:C.gold }}>{a.kicker}</div><div className="text-[15px] leading-snug mb-2" style={{ fontFamily:'Fraunces,serif', color:C.ink }}>{a.title}</div><div className="text-[11px]" style={{ color:C.mute }}>{a.read} de lecture</div></div><div className="w-24 h-20 flex-shrink-0 relative overflow-hidden" style={{ background:C.bgSoft }}><img src={a.img} alt={a.title} className="absolute inset-0 w-full h-full object-cover" onError={e => { e.target.style.display='none'; }}/></div></a>))}</div></div>}
 {tab==='catalog' && <div className="pb-32" style={{ background:C.bg }}><div className="px-5 pt-6 pb-4"><div className="text-[10px] tracking-[0.3em] font-semibold mb-1" style={{ color:C.mute }}>BOUTIQUE</div><h2 className="text-[34px]" style={{ fontFamily:'Fraunces,serif', fontWeight:300, color:C.ink, letterSpacing:'-0.01em' }}>Le catalogue</h2>{apiReady && <div className="text-[10px] mt-1" style={{ color:C.success }}>● API connectée</div>}</div><div className="px-5 mb-6"><div className="text-[10px] tracking-[0.25em] font-semibold mb-3" style={{ color:C.mute }}>CATÉGORIE</div><div className="flex gap-2 flex-wrap"><button onClick={()=>setCatFilter('all')} className="px-4 py-2 text-[10px] tracking-[0.1em] font-semibold border-b-2" style={{ borderColor:catFilter==='all'?C.gold:C.line, color:catFilter==='all'?C.ink:C.mute }}>Tous</button><button onClick={()=>setCatFilter('soleil')} className="px-4 py-2 text-[10px] tracking-[0.1em] font-semibold border-b-2" style={{ borderColor:catFilter==='soleil'?C.gold:C.line, color:catFilter==='soleil'?C.ink:C.mute }}>Soleil</button><button onClick={()=>setCatFilter('vue')} className="px-4 py-2 text-[10px] tracking-[0.1em] font-semibold border-b-2" style={{ borderColor:catFilter==='vue'?C.gold:C.line, color:catFilter==='vue'?C.ink:C.mute }}>Vue</button><button onClick={()=>setCatFilter('lentilles')} className="px-4 py-2 text-[10px] tracking-[0.1em] font-semibold border-b-2" style={{ borderColor:catFilter==='lentilles'?C.gold:C.line, color:catFilter==='lentilles'?C.ink:C.mute }}>Lentilles</button></div></div><div className="px-5 mb-6"><div className="text-[10px] tracking-[0.25em] font-semibold mb-3" style={{ color:C.mute }}>GENRE</div><div className="flex gap-2 flex-wrap"><button onClick={()=>setGenreFilter('all')} className="px-4 py-2 text-[10px] tracking-[0.1em] font-semibold border-b-2" style={{ borderColor:genreFilter==='all'?C.gold:C.line, color:genreFilter==='all'?C.ink:C.mute }}>Tous</button><button onClick={()=>setGenreFilter('homme')} className="px-4 py-2 text-[10px] tracking-[0.1em] font-semibold border-b-2" style={{ borderColor:genreFilter==='homme'?C.gold:C.line, color:genreFilter==='homme'?C.ink:C.mute }}>Homme</button><button onClick={()=>setGenreFilter('femme')} className="px-4 py-2 text-[10px] tracking-[0.1em] font-semibold border-b-2" style={{ borderColor:genreFilter==='femme'?C.gold:C.line, color:genreFilter==='femme'?C.ink:C.mute }}>Femme</button><button onClick={()=>setGenreFilter('unisexe')} className="px-4 py-2 text-[10px] tracking-[0.1em] font-semibold border-b-2" style={{ borderColor:genreFilter==='unisexe'?C.gold:C.line, color:genreFilter==='unisexe'?C.ink:C.mute }}>Unisexe</button></div></div><div className="px-5 grid grid-cols-2 gap-x-4 gap-y-7">{filteredProducts.length>0?filteredProducts.map(p=>(<ProductCard key={p.id} p={p} ccy={ccy} onTap={setSelectedProduct} onWish={toggleWish} wished={wished.includes(p.id)} onCart={addToCart}/>)):<div className="col-span-2 text-center py-12"><div className="text-[13px]" style={{ color:C.mute }}>Aucun produit ne correspond à ces filtres</div></div>}</div></div>}
 </div>

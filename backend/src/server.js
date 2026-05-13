@@ -6,6 +6,7 @@ const ordersRouter       = require('./routes/orders');
 const appointmentsRouter = require('./routes/appointments');
 const authRouter         = require('./routes/auth');
 const adminRouter        = require('./routes/admin');
+const usersRouter        = require('./routes/users');
 
 const app  = express();
 const PORT = process.env.PORT || 3001;
@@ -17,6 +18,7 @@ app.get('/api/health', (_req, res) => res.json({ status: 'ok', service: 'azzabi-
 
 app.use('/api/auth',         authRouter);
 app.use('/api/admin',        adminRouter);
+app.use('/api/users',        usersRouter);
 app.use('/api/products',     productsRouter);
 app.use('/api/orders',       ordersRouter);
 app.use('/api/appointments', appointmentsRouter);

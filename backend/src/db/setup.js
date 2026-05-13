@@ -37,6 +37,14 @@ async function initDB() {
         ref     TEXT PRIMARY KEY,
         data    JSONB NOT NULL
       );
+
+      CREATE TABLE IF NOT EXISTS users (
+        id            SERIAL PRIMARY KEY,
+        name          TEXT NOT NULL,
+        email         TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        created_at    TIMESTAMP DEFAULT NOW()
+      );
     `);
 
     const count = await client.query('SELECT COUNT(*) as n FROM products');
@@ -129,6 +137,38 @@ async function writeDB(data) {
   }
 }
 
+async function createUser({ name, email, passwordHash }) {
+  const result = await pool.query(
+    'INSERT INTO users (name, email, password_hash) VALUES ($1, $2, $3) RETURNING id, name, email, created_at',
+    [name, email, passwordHash]
+  );
+  return result.rows[0];
+}
+
+async function findUserByEmail(email) {
+  const result = await pool.query(
+    'SELECT id, name, email, password_hash, created_at FROM users WHERE email = $1',
+    [email]
+  );
+  return result.rows[0] || null;
+}
+
+async function getUserOrders(email) {
+  const result = await pool.query(
+    "SELECT data FROM orders WHERE data->>'user_email' = $1 ORDER BY (data->>'created_at') DESC",
+    [email]
+  );
+  return result.rows.map(r => r.data);
+}
+
+async function getUserAppointments(email) {
+  const result = await pool.query(
+    "SELECT data FROM appointments WHERE data->>'user_email' = $1 ORDER BY (data->>'created_at') DESC",
+    [email]
+  );
+  return result.rows.map(r => r.data);
+}
+
 initDB().catch(err => {
   console.error('Database initialization failed:', err);
   process.exit(1);
@@ -136,4 +176,4 @@ initDB().catch(err => {
 
 console.log('PostgreSQL database ready');
 
-module.exports = { readDB, writeDB };
+module.exports = { readDB, writeDB, createUser, findUserByEmail, getUserOrders, getUserAppointments };

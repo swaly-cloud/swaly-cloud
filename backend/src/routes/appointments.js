@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const { readDB, writeDB } = require('../db/setup');
+const { optionalUserAuth } = require('../middleware/auth');
 
 const makeRef = () => 'RDV-' + Date.now().toString(36).toUpperCase();
 
 // POST /api/appointments
-router.post('/', async (req, res) => {
+router.post('/', optionalUserAuth, async (req, res) => {
   try {
     const { service, boutique, date, time, name, phone, note } = req.body;
 
@@ -26,6 +27,7 @@ router.post('/', async (req, res) => {
       note: note || null,
       status: 'confirmé',
       created_at: new Date().toISOString(),
+      ...(req.user ? { user_email: req.user.email } : {}),
     };
 
     db.appointments.unshift(appt);

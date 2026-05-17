@@ -110,34 +110,54 @@ function drawOverlay(canvas, photoUrl, glassesImgUrl, analysis) {
 
 function drawFallbackGlasses(ctx, lx, rx, ey, glW, glH, glX, glY) {
   const mid = lx + (rx - lx) / 2;
-  const hw = glH * 0.42;
+  const r = 8;
+
+  // Helper: rounded rect
+  const roundRect = (x, y, w, h, rad) => {
+    ctx.moveTo(x + rad, y);
+    ctx.lineTo(x + w - rad, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + rad);
+    ctx.lineTo(x + w, y + h - rad);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - rad, y + h);
+    ctx.lineTo(x + rad, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - rad);
+    ctx.lineTo(x, y + rad);
+    ctx.quadraticCurveTo(x, y, x + rad, y);
+  };
+
   ctx.strokeStyle = '#D4AF37';
   ctx.lineWidth = 3;
   ctx.shadowColor = '#D4AF37';
   ctx.shadowBlur = 6;
+
   // Left lens
   ctx.beginPath();
-  ctx.roundRect(glX, glY, glW * 0.44, glH, 8);
+  roundRect(glX, glY, glW * 0.44, glH, r);
   ctx.stroke();
+
   // Right lens
   ctx.beginPath();
-  ctx.roundRect(mid + glW * 0.06, glY, glW * 0.44, glH, 8);
+  roundRect(mid + glW * 0.06, glY, glW * 0.44, glH, r);
   ctx.stroke();
+
   // Bridge
   ctx.beginPath();
   ctx.moveTo(glX + glW * 0.44, ey);
   ctx.lineTo(mid + glW * 0.06, ey);
   ctx.stroke();
+
   // Temple left
   ctx.beginPath();
   ctx.moveTo(glX, glY + glH / 2);
   ctx.lineTo(glX - glW * 0.1, glY + glH / 2 - 2);
   ctx.stroke();
+
   // Temple right
   ctx.beginPath();
   ctx.moveTo(mid + glW * 0.5, glY + glH / 2);
   ctx.lineTo(mid + glW * 0.6, glY + glH / 2 - 2);
   ctx.stroke();
+
   ctx.shadowBlur = 0;
 }
 

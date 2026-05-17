@@ -9,7 +9,7 @@ Home, ShoppingBag, Globe2, CalendarDays, User, Search, Heart,
 MapPin, Phone, Plane, Gift, ChevronRight, ChevronLeft, X, Check,
 Star, Plus, Minus, Eye, Sparkles, ArrowUpRight, MessageCircle,
 Bell, Package, Clock, Truck, CheckCircle2, SlidersHorizontal,
-Trash2, Tag, ArrowLeft, Edit2, LogOut, ChevronDown, Zap, ScanFace
+Trash2, Tag, ArrowLeft, Edit2, LogOut, ChevronDown, Zap
 } from 'lucide-react';
 
 const C = {
@@ -817,7 +817,7 @@ try {
 const tabs = [
 { k:'home',        icon:Home,         label:'Accueil' },
 { k:'catalog',     icon:ShoppingBag,  label:'Boutique' },
-{ k:'tryon',       icon:ScanFace,     label:'Essayage' },
+{ k:'tryon',       icon:Eye,          label:'Essayage' },
 { k:'crossover',   icon:Zap,          label:'Crossover' },
 { k:'diaspora',    icon:Globe2,       label:'Diaspora' },
 { k:'appointment', icon:CalendarDays, label:'RDV' },

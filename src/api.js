@@ -57,6 +57,10 @@ export const api = {
       woocommerce: () => request('/admin/sync/woocommerce', { method: 'POST' }),
     },
   },
+  tryon: {
+    analyze: (photoBase64, photoMimeType, product) =>
+      request('/tryon/analyze', { method: 'POST', body: JSON.stringify({ photoBase64, photoMimeType, product }) }),
+  },
 };
 
 export function saveToken(token) { localStorage.setItem('azzabi_admin_token', token); }

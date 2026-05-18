@@ -142,22 +142,30 @@ Réponds UNIQUEMENT avec le prompt, rien d'autre.`
     console.log('✅ GPT-4o prompt ready, calling DALL-E...');
 
     // Generate image with latest available model
-    console.log('🖼️ Calling images.generate with gpt-image-1...');
+    console.log('🖼️ Calling images.generate...');
     const image = await openai.images.generate({
-      model: 'gpt-image-1',
+      model: 'dall-e',
       prompt: enhancedPrompt,
       n: 1,
       size: '1024x1024',
     });
 
-    console.log('🖼️ Image response structure:', JSON.stringify(image, null, 2));
+    console.log('🖼️ Full API response:', JSON.stringify(image, null, 2));
+    console.log('🖼️ Image keys:', Object.keys(image));
 
-    if (!image.data?.[0]?.url) {
-      console.error('❌ No image URL in response. Full response:', image);
+    // Try multiple possible response formats
+    const imageUrl = image.data?.[0]?.url
+      || image.url
+      || image.image_url
+      || image.images?.[0]
+      || image.result?.url
+      || null;
+
+    if (!imageUrl) {
+      console.error('❌ No image URL found. Response object:', image);
       return res.status(500).json({ error: 'Image generation returned no URL', response: image });
     }
 
-    const imageUrl = image.data[0].url;
     console.log('✅ Image URL generated:', imageUrl);
     res.json({ imageUrl, enhanced_prompt: enhancedPrompt });
   } catch (openaiErr) {

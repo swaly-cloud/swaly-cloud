@@ -142,6 +142,7 @@ Réponds UNIQUEMENT avec le prompt, rien d'autre.`
     console.log('✅ GPT-4o prompt ready, calling DALL-E...');
 
     // Generate image with latest available model
+    console.log('🖼️ Calling images.generate with gpt-image-2...');
     const image = await openai.images.generate({
       model: 'gpt-image-2',
       prompt: enhancedPrompt,
@@ -149,13 +150,15 @@ Réponds UNIQUEMENT avec le prompt, rien d'autre.`
       size: '1024x1024',
     });
 
+    console.log('🖼️ Image response structure:', JSON.stringify(image, null, 2));
+
     if (!image.data?.[0]?.url) {
-      console.error('❌ DALL-E returned no image URL:', image);
-      return res.status(500).json({ error: 'DALL-E returned no image URL' });
+      console.error('❌ No image URL in response. Full response:', image);
+      return res.status(500).json({ error: 'Image generation returned no URL', response: image });
     }
 
     const imageUrl = image.data[0].url;
-    console.log('✅ DALL-E image generated successfully');
+    console.log('✅ Image URL generated:', imageUrl);
     res.json({ imageUrl, enhanced_prompt: enhancedPrompt });
   } catch (openaiErr) {
     console.error('🚨 OpenAI Error:', openaiErr.message);

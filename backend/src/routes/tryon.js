@@ -143,11 +143,10 @@ Réponds UNIQUEMENT avec le prompt, rien d'autre.`
 
     // Generate image with latest available model
     const image = await openai.images.generate({
-      model: 'dall-e-3',
+      model: 'gpt-image-2',
       prompt: enhancedPrompt,
       n: 1,
       size: '1024x1024',
-      quality: 'hd',
     });
 
     if (!image.data?.[0]?.url) {

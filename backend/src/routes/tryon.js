@@ -33,9 +33,9 @@ router.post('/analyze', async (req, res) => {
           type: 'text',
           text: `Tu es un opticien expert. Analyse ce visage pour essayer ${productDesc}.
 
-IMPORTANT: Les coordonnées des yeux doivent être TRÈS PRÉCISES pour le rendu visuel.
+🔴 CRITIQUE: Les coordonnées des yeux DOIVENT être EXACTES - c'est pour placer les lunettes sur le visage!
 
-Fournis uniquement un objet JSON valide avec ces champs:
+Fournis UNIQUEMENT un objet JSON valide (aucun texte avant ou après):
 {
   "faceShape": "ovale|carré|rond|cœur|rectangulaire",
   "leftEye": { "x": 0.0, "y": 0.0 },
@@ -45,16 +45,24 @@ Fournis uniquement un objet JSON valide avec ces champs:
   "tips": "conseil de style en français"
 }
 
-Règles STRICTES pour les coordonnées (0=gauche/haut, 1=droite/bas):
-- leftEye.x: 0.33-0.38 (tiers gauche du visage)
-- rightEye.x: 0.62-0.67 (tiers droit du visage)
-- leftEye.y et rightEye.y: 0.38-0.45 (légèrement au-dessus du centre)
-- Les deux yeux DOIVENT avoir la même y (hauteur identique)
-- Distance entre yeux: 0.25-0.35 (typiquement 0.30)
-- CES VALEURS SONT CRITIQUES - sois ultra-précis!
+Système de coordonnées (0=haut/gauche, 1=bas/droite):
+Si l'image fait 1000x1000px:
+- x=0.35 = 350px depuis la gauche
+- y=0.40 = 400px depuis le haut
 
-score: de 0 à 100 (adéquation de cette monture avec la forme du visage).
-Réponds uniquement avec le JSON, sans texte autour.`,
+Règles ABSOLUES pour les yeux (respecter au pixel près):
+- La position Y doit placer les yeux DANS LE VISAGE, pas sur le front/cheveux!
+- Typiquement: y doit être entre 0.35-0.48 (les yeux sont au-dessus du centre du visage)
+- Pour ce visage précisément: identifier les yeux RÉELS et leur position exacte
+- leftEye.x: 0.32-0.40 (tiers gauche)
+- rightEye.x: 0.60-0.68 (tiers droit)
+- leftEye.y: 0.36-0.48 (dans la zone des yeux visibles)
+- rightEye.y: DOIT être identique à leftEye.y (même hauteur)
+- Distance entre les yeux en x: doit être 0.22-0.38 (typiquement ~0.28)
+- VÉRIFIER: Les yeux doivent être visiblement sur le visage, pas ailleurs!
+
+score: 0-100 (adéquation monture/forme visage).
+Réponds SEULEMENT le JSON, pas d'autres mots!`,
         },
       ],
     }],

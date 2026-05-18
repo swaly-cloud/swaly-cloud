@@ -1,5 +1,6 @@
 const express = require('express');
 const Anthropic = require('@anthropic-ai/sdk');
+const { OpenAI } = require('openai');
 const { authMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
@@ -74,6 +75,46 @@ Réponds uniquement avec le JSON, sans texte autour.`,
   }
 
   res.json({ analysis, usage: message.usage });
+});
+
+// ─── GENERATE IMAGE WITH DALL-E 3 ─────────────────────────────────
+router.post('/generate', async (req, res) => {
+  const { analysis, product } = req.body;
+
+  if (!analysis) return res.status(400).json({ error: 'Analyse requise' });
+  if (!process.env.OPENAI_API_KEY) return res.status(500).json({ error: 'Clé API OpenAI manquante (OPENAI_API_KEY)' });
+
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+  const productDesc = product
+    ? `${product.brand} ${product.name} (${product.cat}, ${product.price} TND)`
+    : 'une monture élégante';
+
+  const prompt = `Crée une photo réaliste et professionnelle d'une personne portant ${productDesc}.
+
+Caractéristiques du visage détecté:
+- Forme: ${analysis.faceShape}
+- Score de compatibilité: ${analysis.score}/100
+
+Recommandation de l'opticien: ${analysis.recommendation}
+
+Instructions:
+- Image haute qualité, bien éclairée, portrait naturel
+- La monture doit être clairement visible et bien ajustée au visage
+- Fond légèrement flou (bokeh studio)
+- Style professionnel et moderne
+- Pas de texte, logos ou watermarks`;
+
+  const message = await openai.images.generate({
+    model: 'dall-e-3',
+    prompt: prompt,
+    n: 1,
+    size: '1024x1024',
+    quality: 'hd',
+  });
+
+  const imageUrl = message.data[0].url;
+  res.json({ imageUrl, revised_prompt: message.data[0].revised_prompt });
 });
 
 module.exports = router;

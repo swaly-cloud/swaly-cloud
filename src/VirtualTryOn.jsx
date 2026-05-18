@@ -300,11 +300,34 @@ export default function VirtualTryOn({ products = [] }) {
       ).then(r => r.ok ? r.json() : r.json().then(e => { throw new Error(e.error); }));
 
       setAnalysis(res);
+
+      // Generate image with DALL-E
+      try {
+        const { imageUrl } = await fetch(
+          `${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/tryon/generate`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('azzabi_admin_token')}`,
+            },
+            body: JSON.stringify({ analysis: res, product: selectedProduct }),
+          }
+        ).then(r => r.ok ? r.json() : r.json().then(e => { throw new Error(e.error); }));
+
+        setAnalysis(prev => ({ ...prev, generatedImageUrl: imageUrl }));
+      } catch (genErr) {
+        console.warn('DALL-E generation skipped:', genErr.message);
+        // Continue with canvas overlay if DALL-E fails
+      }
+
       setStep('result');
 
-      // Draw overlay after state update
+      // Draw canvas overlay as fallback after state update
       setTimeout(() => {
-        if (canvasRef.current) drawOverlay(canvasRef.current, photo, selectedProduct.img, res);
+        if (canvasRef.current && !analysis?.generatedImageUrl) {
+          drawOverlay(canvasRef.current, photo, selectedProduct.img, res);
+        }
       }, 100);
     } catch (e) {
       setErr(e.message || 'Erreur lors de l\'analyse');
@@ -441,9 +464,18 @@ export default function VirtualTryOn({ products = [] }) {
         {/* ── STEP: RESULT ── */}
         {step === 'result' && analysis && (
           <div style={{ display: 'grid', gap: 12 }}>
-            {/* Canvas with overlay */}
-            <div style={{ borderRadius: 14, overflow: 'hidden', border: `1px solid ${C.bd}` }}>
-              <canvas ref={canvasRef} style={{ width: '100%', display: 'block' }} />
+            {/* DALL-E Generated Image or Canvas Overlay */}
+            <div style={{ borderRadius: 14, overflow: 'hidden', border: `1px solid ${C.bd}`, position: 'relative' }}>
+              {analysis.generatedImageUrl ? (
+                <>
+                  <img src={analysis.generatedImageUrl} alt="Try-on DALL-E" style={{ width: '100%', display: 'block' }} />
+                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '8px 12px', background: 'linear-gradient(transparent,rgba(0,0,0,.5))', fontSize: 9, color: '#888' }}>
+                    Généré par DALL-E 3 ✨
+                  </div>
+                </>
+              ) : (
+                <canvas ref={canvasRef} style={{ width: '100%', display: 'block' }} />
+              )}
             </div>
 
             {/* Score + face shape */}

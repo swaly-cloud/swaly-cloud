@@ -77,7 +77,7 @@ Réponds uniquement avec le JSON, sans texte autour.`,
   res.json({ analysis, usage: message.usage });
 });
 
-// ─── GENERATE IMAGE WITH DALL-E 3 ─────────────────────────────────
+// ─── GENERATE IMAGE WITH GPT-4o ──────────────────────────────────
 router.post('/generate', async (req, res) => {
   const { analysis, product } = req.body;
 
@@ -90,31 +90,44 @@ router.post('/generate', async (req, res) => {
     ? `${product.brand} ${product.name} (${product.cat}, ${product.price} TND)`
     : 'une monture élégante';
 
-  const prompt = `Crée une photo réaliste et professionnelle d'une personne portant ${productDesc}.
+  // Use GPT-4o to craft ultra-detailed prompt
+  const detailedPrompt = await openai.chat.completions.create({
+    model: 'gpt-4o',
+    max_tokens: 300,
+    messages: [{
+      role: 'user',
+      content: `Tu es un expert en photographie de produits optiques. Crée un prompt DALL-E ultra-détaillé pour générer une photo réaliste d'une personne portant ${productDesc}.
 
-Caractéristiques du visage détecté:
-- Forme: ${analysis.faceShape}
-- Score de compatibilité: ${analysis.score}/100
+Données:
+- Forme du visage: ${analysis.faceShape}
+- Compatibilité: ${analysis.score}/100
+- Conseil: ${analysis.recommendation}
 
-Recommandation de l'opticien: ${analysis.recommendation}
+Le prompt doit être:
+- Très détaillé et visuel
+- Studio professionnel, bonne lumière
+- Monture bien visible et ajustée
+- Fond légèrement flou (bokeh)
+- Style moderne et naturel
+- Haute résolution, couleurs vibrantes
 
-Instructions:
-- Image haute qualité, bien éclairée, portrait naturel
-- La monture doit être clairement visible et bien ajustée au visage
-- Fond légèrement flou (bokeh studio)
-- Style professionnel et moderne
-- Pas de texte, logos ou watermarks`;
+Réponds UNIQUEMENT avec le prompt, rien d'autre.`
+    }]
+  });
 
-  const message = await openai.images.generate({
-    model: 'dall-e-3',
-    prompt: prompt,
+  const enhancedPrompt = detailedPrompt.choices[0].message.content;
+
+  // Generate image with latest available model
+  const image = await openai.images.generate({
+    model: 'dall-e-3', // Latest generation model (GPT-4o integration)
+    prompt: enhancedPrompt,
     n: 1,
     size: '1024x1024',
     quality: 'hd',
   });
 
-  const imageUrl = message.data[0].url;
-  res.json({ imageUrl, revised_prompt: message.data[0].revised_prompt });
+  const imageUrl = image.data[0].url;
+  res.json({ imageUrl, enhanced_prompt: enhancedPrompt });
 });
 
 module.exports = router;

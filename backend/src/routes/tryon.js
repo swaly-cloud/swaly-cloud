@@ -45,11 +45,13 @@ Fournis uniquement un objet JSON valide avec ces champs:
   "tips": "conseil de style en français"
 }
 
-Règles STRICTES pour les coordonnées (valeurs entre 0 et 1):
-- leftEye.x et rightEye.x: position horizontale (0=gauche, 1=droite) — utilise 0.3-0.4 pour l'œil gauche, 0.6-0.7 pour le droit
-- leftEye.y et rightEye.y: position verticale (0=haut, 1=bas) — environ 0.35-0.45 typiquement
-- Les deux yeux doivent être à la même hauteur approximativement
-- La distance entre les yeux doit être réaliste (0.3 environ)
+Règles STRICTES pour les coordonnées (0=gauche/haut, 1=droite/bas):
+- leftEye.x: 0.33-0.38 (tiers gauche du visage)
+- rightEye.x: 0.62-0.67 (tiers droit du visage)
+- leftEye.y et rightEye.y: 0.38-0.45 (légèrement au-dessus du centre)
+- Les deux yeux DOIVENT avoir la même y (hauteur identique)
+- Distance entre yeux: 0.25-0.35 (typiquement 0.30)
+- CES VALEURS SONT CRITIQUES - sois ultra-précis!
 
 score: de 0 à 100 (adéquation de cette monture avec la forme du visage).
 Réponds uniquement avec le JSON, sans texte autour.`,

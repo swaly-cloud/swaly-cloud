@@ -153,7 +153,20 @@ Réponds UNIQUEMENT avec le prompt, rien d'autre.`
     console.log('🖼️ Raw response:', imageResponse);
     console.log('🖼️ Response type:', typeof imageResponse);
     console.log('🖼️ Response keys:', Object.keys(imageResponse || {}));
-    console.log('🖼️ Response as JSON:', JSON.stringify(imageResponse));
+    console.log('🖼️ Response as JSON:', JSON.stringify(imageResponse, null, 2));
+    console.log('🖼️ imageResponse.data:', imageResponse?.data);
+    console.log('🖼️ imageResponse.data type:', typeof imageResponse?.data);
+
+    // If it's an array
+    if (Array.isArray(imageResponse)) {
+      console.log('🖼️ Response is an array with length:', imageResponse.length);
+      console.log('🖼️ First element:', imageResponse[0]);
+    }
+
+    // If it's a string (URL directly)
+    if (typeof imageResponse === 'string') {
+      console.log('🖼️ Response is a string (direct URL)');
+    }
 
     // Extract URL from various possible locations
     let imageUrl = null;

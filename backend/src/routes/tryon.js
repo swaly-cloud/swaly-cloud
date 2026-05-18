@@ -142,9 +142,9 @@ Réponds UNIQUEMENT avec le prompt, rien d'autre.`
     console.log('✅ GPT-4o prompt ready, calling DALL-E...');
 
     // Generate image with latest available model
-    console.log('🖼️ Calling images.generate with gpt-image-2...');
+    console.log('🖼️ Calling images.generate with dall-e-2...');
     const image = await openai.images.generate({
-      model: 'gpt-image-2',
+      model: 'dall-e-2',
       prompt: enhancedPrompt,
       n: 1,
       size: '1024x1024',

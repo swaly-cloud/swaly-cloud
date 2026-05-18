@@ -84,21 +84,29 @@ router.post('/generate', async (req, res) => {
   const { analysis, product } = req.body;
 
   if (!analysis) return res.status(400).json({ error: 'Analyse requise' });
-  if (!process.env.OPENAI_API_KEY) return res.status(500).json({ error: 'Clé API OpenAI manquante (OPENAI_API_KEY)' });
 
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    console.error('❌ OPENAI_API_KEY not found in environment');
+    return res.status(500).json({ error: 'Clé API OpenAI manquante (OPENAI_API_KEY)' });
+  }
+
+  console.log('🔑 Using OpenAI API key (length:', apiKey.length, ')');
+  const openai = new OpenAI({ apiKey });
 
   const productDesc = product
     ? `${product.brand} ${product.name} (${product.cat}, ${product.price} TND)`
     : 'une monture élégante';
 
-  // Use GPT-4o to craft ultra-detailed prompt
-  const detailedPrompt = await openai.chat.completions.create({
-    model: 'gpt-4o',
-    max_tokens: 300,
-    messages: [{
-      role: 'user',
-      content: `Tu es un expert en photographie de produits optiques. Crée un prompt DALL-E ultra-détaillé pour générer une photo réaliste d'une personne portant ${productDesc}.
+  try {
+    // Use GPT-4o to craft ultra-detailed prompt
+    console.log('📝 Calling GPT-4o to enhance prompt...');
+    const detailedPrompt = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      max_tokens: 300,
+      messages: [{
+        role: 'user',
+        content: `Tu es un expert en photographie de produits optiques. Crée un prompt DALL-E ultra-détaillé pour générer une photo réaliste d'une personne portant ${productDesc}.
 
 Données:
 - Forme du visage: ${analysis.faceShape}
@@ -114,22 +122,39 @@ Le prompt doit être:
 - Haute résolution, couleurs vibrantes
 
 Réponds UNIQUEMENT avec le prompt, rien d'autre.`
-    }]
-  });
+      }]
+    });
 
-  const enhancedPrompt = detailedPrompt.choices[0].message.content;
+    if (!detailedPrompt.choices?.[0]?.message?.content) {
+      console.error('❌ GPT-4o returned empty content:', detailedPrompt);
+      return res.status(500).json({ error: 'GPT-4o returned empty response' });
+    }
 
-  // Generate image with latest available model
-  const image = await openai.images.generate({
-    model: 'dall-e-3', // Latest generation model (GPT-4o integration)
-    prompt: enhancedPrompt,
-    n: 1,
-    size: '1024x1024',
-    quality: 'hd',
-  });
+    const enhancedPrompt = detailedPrompt.choices[0].message.content;
+    console.log('✅ GPT-4o prompt ready, calling DALL-E...');
 
-  const imageUrl = image.data[0].url;
-  res.json({ imageUrl, enhanced_prompt: enhancedPrompt });
+    // Generate image with latest available model
+    const image = await openai.images.generate({
+      model: 'dall-e-3',
+      prompt: enhancedPrompt,
+      n: 1,
+      size: '1024x1024',
+      quality: 'hd',
+    });
+
+    if (!image.data?.[0]?.url) {
+      console.error('❌ DALL-E returned no image URL:', image);
+      return res.status(500).json({ error: 'DALL-E returned no image URL' });
+    }
+
+    const imageUrl = image.data[0].url;
+    console.log('✅ DALL-E image generated successfully');
+    res.json({ imageUrl, enhanced_prompt: enhancedPrompt });
+  } catch (openaiErr) {
+    console.error('🚨 OpenAI Error:', openaiErr.message);
+    console.error('🚨 Error details:', openaiErr.error || openaiErr.response?.data || openaiErr);
+    res.status(500).json({ error: `OpenAI Error: ${openaiErr.message}` });
+  }
 });
 
 module.exports = router;

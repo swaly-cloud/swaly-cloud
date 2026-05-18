@@ -62,145 +62,6 @@ function LoginGate({ onAuth }) {
   );
 }
 
-// ─── Remove white background from glasses image ───────────────────
-function removeWhiteBackground(imgSource, callback) {
-  const img = new Image();
-  img.crossOrigin = 'anonymous';
-  img.onload = () => {
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = img.width;
-    tempCanvas.height = img.height;
-    const tempCtx = tempCanvas.getContext('2d');
-    tempCtx.drawImage(img, 0, 0);
-
-    const imgData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
-    const data = imgData.data;
-
-    // Remove white pixels (255,255,255) and near-white pixels
-    for (let i = 0; i < data.length; i += 4) {
-      const r = data[i];
-      const g = data[i + 1];
-      const b = data[i + 2];
-      const a = data[i + 3];
-
-      // If pixel is white or very light, make it transparent
-      if (r > 240 && g > 240 && b > 240) {
-        data[i + 3] = 0; // Make transparent
-      }
-    }
-
-    tempCtx.putImageData(imgData, 0, 0);
-    callback(tempCanvas.toDataURL('image/png'));
-  };
-  img.onerror = () => callback(imgSource); // Fallback to original
-  img.src = imgSource;
-}
-
-// ─── Canvas overlay helper ─────────────────────────────────────────
-function drawOverlay(canvas, photoUrl, glassesImgUrl, analysis) {
-  const ctx = canvas.getContext('2d');
-  const img = new Image();
-  img.crossOrigin = 'anonymous';
-  img.onload = () => {
-    canvas.width = img.width;
-    canvas.height = img.height;
-    ctx.drawImage(img, 0, 0);
-
-    if (!analysis?.leftEye || !analysis?.rightEye) return;
-
-    const lx = analysis.leftEye.x * img.width;
-    const rx = analysis.rightEye.x * img.width;
-    const ly = analysis.leftEye.y * img.height;
-    const ry = analysis.rightEye.y * img.height;
-    const eyeDist = rx - lx;
-    const centerY = (ly + ry) / 2;
-
-    // Glasses width = distance between eyes * 1.5 (standard fit)
-    const glW = eyeDist * 1.5;
-    const glH = glW * 0.5; // Aspect ratio glasses
-
-    // Position: center glasses between eyes horizontally, align with eye level
-    const glX = lx + eyeDist / 2 - glW / 2;
-    const glY = centerY - glH / 2.2; // Slightly above center for natural fit
-
-    if (glassesImgUrl) {
-      // Remove white background and overlay
-      removeWhiteBackground(glassesImgUrl, (processedUrl) => {
-        const gImg = new Image();
-        gImg.crossOrigin = 'anonymous';
-        gImg.onload = () => {
-          ctx.globalAlpha = 0.9;
-          ctx.drawImage(gImg, glX, glY, glW, glH);
-          ctx.globalAlpha = 1;
-        };
-        gImg.onerror = () => drawFallbackGlasses(ctx, lx, rx, centerY, glW, glH, glX, glY);
-        gImg.src = processedUrl;
-      });
-    } else {
-      drawFallbackGlasses(ctx, lx, rx, centerY, glW, glH, glX, glY);
-    }
-
-    // Eye position markers (subtle)
-    ctx.fillStyle = 'rgba(201,162,39,0.4)';
-    ctx.beginPath(); ctx.arc(lx, ly, 3, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(rx, ry, 3, 0, Math.PI * 2); ctx.fill();
-  };
-  img.src = photoUrl;
-}
-
-function drawFallbackGlasses(ctx, lx, rx, ey, glW, glH, glX, glY) {
-  const mid = lx + (rx - lx) / 2;
-  const r = 8;
-
-  // Helper: rounded rect
-  const roundRect = (x, y, w, h, rad) => {
-    ctx.moveTo(x + rad, y);
-    ctx.lineTo(x + w - rad, y);
-    ctx.quadraticCurveTo(x + w, y, x + w, y + rad);
-    ctx.lineTo(x + w, y + h - rad);
-    ctx.quadraticCurveTo(x + w, y + h, x + w - rad, y + h);
-    ctx.lineTo(x + rad, y + h);
-    ctx.quadraticCurveTo(x, y + h, x, y + h - rad);
-    ctx.lineTo(x, y + rad);
-    ctx.quadraticCurveTo(x, y, x + rad, y);
-  };
-
-  ctx.strokeStyle = '#D4AF37';
-  ctx.lineWidth = 3;
-  ctx.shadowColor = '#D4AF37';
-  ctx.shadowBlur = 6;
-
-  // Left lens
-  ctx.beginPath();
-  roundRect(glX, glY, glW * 0.44, glH, r);
-  ctx.stroke();
-
-  // Right lens
-  ctx.beginPath();
-  roundRect(mid + glW * 0.06, glY, glW * 0.44, glH, r);
-  ctx.stroke();
-
-  // Bridge
-  ctx.beginPath();
-  ctx.moveTo(glX + glW * 0.44, ey);
-  ctx.lineTo(mid + glW * 0.06, ey);
-  ctx.stroke();
-
-  // Temple left
-  ctx.beginPath();
-  ctx.moveTo(glX, glY + glH / 2);
-  ctx.lineTo(glX - glW * 0.1, glY + glH / 2 - 2);
-  ctx.stroke();
-
-  // Temple right
-  ctx.beginPath();
-  ctx.moveTo(mid + glW * 0.5, glY + glH / 2);
-  ctx.lineTo(mid + glW * 0.6, glY + glH / 2 - 2);
-  ctx.stroke();
-
-  ctx.shadowBlur = 0;
-}
-
 // ─── Score badge ───────────────────────────────────────────────────
 function ScoreBadge({ score }) {
   const color = score >= 80 ? C.ok : score >= 60 ? C.ac : C.er;
@@ -226,7 +87,6 @@ export default function VirtualTryOn({ products = [] }) {
   const [cameraOn, setCameraOn] = useState(false);
   const [step, setStep] = useState('pick'); // pick | camera | product | result
   const videoRef = useRef(null);
-  const canvasRef = useRef(null);
   const streamRef = useRef(null);
 
   // Check existing token
@@ -299,45 +159,31 @@ export default function VirtualTryOn({ products = [] }) {
         }
       ).then(r => r.ok ? r.json() : r.json().then(e => { throw new Error(e.error); }));
 
-      setAnalysis(res);
-
       // Generate image with DALL-E
-      try {
-        console.log('🎨 Calling DALL-E endpoint...');
-        const genRes = await fetch(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/tryon/generate`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('azzabi_admin_token')}`,
-            },
-            body: JSON.stringify({ analysis: res, product: selectedProduct }),
-          }
-        );
-
-        if (!genRes.ok) {
-          const errData = await genRes.json();
-          console.error('🚨 DALL-E Error:', errData);
-          throw new Error(errData.error || `HTTP ${genRes.status}`);
+      console.log('🎨 Calling DALL-E endpoint...');
+      const genRes = await fetch(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/tryon/generate`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('azzabi_admin_token')}`,
+          },
+          body: JSON.stringify({ analysis: res, product: selectedProduct }),
         }
+      );
 
-        const { imageUrl } = await genRes.json();
-        console.log('✅ DALL-E Success:', imageUrl);
-        setAnalysis(prev => ({ ...prev, generatedImageUrl: imageUrl }));
-      } catch (genErr) {
-        console.warn('⚠️ DALL-E skipped:', genErr.message);
-        // Continue with canvas overlay if DALL-E fails
+      if (!genRes.ok) {
+        const errData = await genRes.json();
+        console.error('🚨 DALL-E Error:', errData);
+        throw new Error(errData.error || `HTTP ${genRes.status}`);
       }
 
-      setStep('result');
+      const { imageUrl } = await genRes.json();
+      console.log('✅ DALL-E Success:', imageUrl);
 
-      // Draw canvas overlay as fallback after state update
-      setTimeout(() => {
-        if (canvasRef.current && !analysis?.generatedImageUrl) {
-          drawOverlay(canvasRef.current, photo, selectedProduct.img, res);
-        }
-      }, 100);
+      setAnalysis({ ...res, generatedImageUrl: imageUrl });
+      setStep('result');
     } catch (e) {
       setErr(e.message || 'Erreur lors de l\'analyse');
     } finally {
@@ -345,12 +191,6 @@ export default function VirtualTryOn({ products = [] }) {
     }
   }, [photo, selectedProduct]);
 
-  // Redraw when result mounts
-  useEffect(() => {
-    if (step === 'result' && analysis && canvasRef.current) {
-      drawOverlay(canvasRef.current, photo, selectedProduct?.img, analysis);
-    }
-  }, [step, analysis]);
 
   const reset = () => { setPhoto(null); setPhotoBlob(null); setSelectedProduct(null); setAnalysis(null); setErr(''); setStep('pick'); stopCamera(); };
 
@@ -473,18 +313,12 @@ export default function VirtualTryOn({ products = [] }) {
         {/* ── STEP: RESULT ── */}
         {step === 'result' && analysis && (
           <div style={{ display: 'grid', gap: 12 }}>
-            {/* DALL-E Generated Image or Canvas Overlay */}
+            {/* DALL-E Generated Image */}
             <div style={{ borderRadius: 14, overflow: 'hidden', border: `1px solid ${C.bd}`, position: 'relative' }}>
-              {analysis.generatedImageUrl ? (
-                <>
-                  <img src={analysis.generatedImageUrl} alt="Try-on DALL-E" style={{ width: '100%', display: 'block' }} />
-                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '8px 12px', background: 'linear-gradient(transparent,rgba(0,0,0,.5))', fontSize: 9, color: '#888' }}>
-                    Généré par DALL-E 3 ✨
-                  </div>
-                </>
-              ) : (
-                <canvas ref={canvasRef} style={{ width: '100%', display: 'block' }} />
-              )}
+              <img src={analysis.generatedImageUrl} alt="Try-on DALL-E" style={{ width: '100%', display: 'block' }} />
+              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '8px 12px', background: 'linear-gradient(transparent,rgba(0,0,0,.5))', fontSize: 9, color: '#888' }}>
+                Généré par DALL-E 3 ✨
+              </div>
             </div>
 
             {/* Score + face shape */}

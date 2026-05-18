@@ -76,34 +76,37 @@ function drawOverlay(canvas, photoUrl, glassesImgUrl, analysis) {
 
     const lx = analysis.leftEye.x * img.width;
     const rx = analysis.rightEye.x * img.width;
-    const ey = ((analysis.leftEye.y + analysis.rightEye.y) / 2) * img.height;
+    const ly = analysis.leftEye.y * img.height;
+    const ry = analysis.rightEye.y * img.height;
     const eyeDist = rx - lx;
-    const glW = eyeDist * (analysis.glassesWidthRatio ? analysis.glassesWidthRatio / 0.42 * 1.6 : 1.6);
-    const glH = glW * 0.38;
+    const centerY = (ly + ry) / 2;
+
+    // Glasses width = distance between eyes * 1.5 (standard fit)
+    const glW = eyeDist * 1.5;
+    const glH = glW * 0.5; // Aspect ratio glasses
+
+    // Position: center glasses between eyes horizontally, align with eye level
     const glX = lx + eyeDist / 2 - glW / 2;
-    const glY = ey - glH * 0.48;
+    const glY = centerY - glH / 2.2; // Slightly above center for natural fit
 
     if (glassesImgUrl) {
       const gImg = new Image();
       gImg.crossOrigin = 'anonymous';
       gImg.onload = () => {
-        ctx.globalAlpha = 0.88;
+        ctx.globalAlpha = 0.85;
         ctx.drawImage(gImg, glX, glY, glW, glH);
         ctx.globalAlpha = 1;
       };
-      gImg.onerror = () => drawFallbackGlasses(ctx, lx, rx, ey, glW, glH, glX, glY);
+      gImg.onerror = () => drawFallbackGlasses(ctx, lx, rx, centerY, glW, glH, glX, glY);
       gImg.src = glassesImgUrl;
     } else {
-      drawFallbackGlasses(ctx, lx, rx, ey, glW, glH, glX, glY);
+      drawFallbackGlasses(ctx, lx, rx, centerY, glW, glH, glX, glY);
     }
 
-    // Eye markers
-    [{ x: lx, y: analysis.leftEye.y * img.height }, { x: rx, y: analysis.rightEye.y * img.height }].forEach(({ x, y }) => {
-      ctx.beginPath();
-      ctx.arc(x, y, 4, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(201,162,39,0.7)';
-      ctx.fill();
-    });
+    // Eye position markers (debug)
+    ctx.fillStyle = 'rgba(201,162,39,0.6)';
+    ctx.beginPath(); ctx.arc(lx, ly, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(rx, ry, 5, 0, Math.PI * 2); ctx.fill();
   };
   img.src = photoUrl;
 }

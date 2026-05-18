@@ -32,21 +32,23 @@ router.post('/analyze', async (req, res) => {
           type: 'text',
           text: `Tu es un opticien expert. Analyse ce visage pour essayer ${productDesc}.
 
+IMPORTANT: Les coordonnées des yeux doivent être TRÈS PRÉCISES pour le rendu visuel.
+
 Fournis uniquement un objet JSON valide avec ces champs:
 {
   "faceShape": "ovale|carré|rond|cœur|rectangulaire",
   "leftEye": { "x": 0.0, "y": 0.0 },
   "rightEye": { "x": 0.0, "y": 0.0 },
-  "glassesWidthRatio": 0.0,
   "recommendation": "texte de recommandation en français",
   "score": 0,
   "tips": "conseil de style en français"
 }
 
-Règles pour les coordonnées (valeurs entre 0 et 1, proportion de la taille de l'image):
-- leftEye.x et rightEye.x: position horizontale du centre de chaque œil
-- leftEye.y et rightEye.y: position verticale du centre de chaque œil
-- glassesWidthRatio: largeur idéale des montures = distance entre les yeux * 1.4
+Règles STRICTES pour les coordonnées (valeurs entre 0 et 1):
+- leftEye.x et rightEye.x: position horizontale (0=gauche, 1=droite) — utilise 0.3-0.4 pour l'œil gauche, 0.6-0.7 pour le droit
+- leftEye.y et rightEye.y: position verticale (0=haut, 1=bas) — environ 0.35-0.45 typiquement
+- Les deux yeux doivent être à la même hauteur approximativement
+- La distance entre les yeux doit être réaliste (0.3 environ)
 
 score: de 0 à 100 (adéquation de cette monture avec la forme du visage).
 Réponds uniquement avec le JSON, sans texte autour.`,
@@ -65,7 +67,6 @@ Réponds uniquement avec le JSON, sans texte autour.`,
       faceShape: 'indéterminé',
       leftEye: { x: 0.35, y: 0.42 },
       rightEye: { x: 0.65, y: 0.42 },
-      glassesWidthRatio: 0.42,
       recommendation: raw,
       score: 75,
       tips: '',
@@ -76,3 +77,4 @@ Réponds uniquement avec le JSON, sans texte autour.`,
 });
 
 module.exports = router;
+

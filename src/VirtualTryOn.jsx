@@ -303,7 +303,8 @@ export default function VirtualTryOn({ products = [] }) {
 
       // Generate image with DALL-E
       try {
-        const { imageUrl } = await fetch(
+        console.log('🎨 Calling DALL-E endpoint...');
+        const genRes = await fetch(
           `${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/tryon/generate`,
           {
             method: 'POST',
@@ -313,11 +314,19 @@ export default function VirtualTryOn({ products = [] }) {
             },
             body: JSON.stringify({ analysis: res, product: selectedProduct }),
           }
-        ).then(r => r.ok ? r.json() : r.json().then(e => { throw new Error(e.error); }));
+        );
 
+        if (!genRes.ok) {
+          const errData = await genRes.json();
+          console.error('🚨 DALL-E Error:', errData);
+          throw new Error(errData.error || `HTTP ${genRes.status}`);
+        }
+
+        const { imageUrl } = await genRes.json();
+        console.log('✅ DALL-E Success:', imageUrl);
         setAnalysis(prev => ({ ...prev, generatedImageUrl: imageUrl }));
       } catch (genErr) {
-        console.warn('DALL-E generation skipped:', genErr.message);
+        console.warn('⚠️ DALL-E skipped:', genErr.message);
         // Continue with canvas overlay if DALL-E fails
       }
 

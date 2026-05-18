@@ -141,32 +141,44 @@ Réponds UNIQUEMENT avec le prompt, rien d'autre.`
     const enhancedPrompt = detailedPrompt.choices[0].message.content;
     console.log('✅ GPT-4o prompt ready, calling DALL-E...');
 
-    // Generate image with latest available model
-    console.log('🖼️ Calling images.generate...');
-    const image = await openai.images.generate({
-      model: 'dall-e',
+    // Generate image with gpt-image-1
+    console.log('🖼️ Calling images.generate with gpt-image-1...');
+    const imageResponse = await openai.images.generate({
+      model: 'gpt-image-1',
       prompt: enhancedPrompt,
       n: 1,
       size: '1024x1024',
     });
 
-    console.log('🖼️ Full API response:', JSON.stringify(image, null, 2));
-    console.log('🖼️ Image keys:', Object.keys(image));
+    console.log('🖼️ Raw response:', imageResponse);
+    console.log('🖼️ Response type:', typeof imageResponse);
+    console.log('🖼️ Response keys:', Object.keys(imageResponse || {}));
+    console.log('🖼️ Response as JSON:', JSON.stringify(imageResponse));
 
-    // Try multiple possible response formats
-    const imageUrl = image.data?.[0]?.url
-      || image.url
-      || image.image_url
-      || image.images?.[0]
-      || image.result?.url
-      || null;
-
-    if (!imageUrl) {
-      console.error('❌ No image URL found. Response object:', image);
-      return res.status(500).json({ error: 'Image generation returned no URL', response: image });
+    // Extract URL from various possible locations
+    let imageUrl = null;
+    if (imageResponse?.data?.[0]?.url) {
+      imageUrl = imageResponse.data[0].url;
+    } else if (typeof imageResponse === 'string') {
+      imageUrl = imageResponse;
+    } else if (imageResponse?.url) {
+      imageUrl = imageResponse.url;
+    } else if (imageResponse?.[0]?.url) {
+      imageUrl = imageResponse[0].url;
     }
 
-    console.log('✅ Image URL generated:', imageUrl);
+    console.log('🖼️ Extracted imageUrl:', imageUrl);
+
+    if (!imageUrl) {
+      console.error('❌ Could not extract image URL from response');
+      return res.status(500).json({
+        error: 'Could not extract image URL',
+        response_keys: Object.keys(imageResponse || {}),
+        response_type: typeof imageResponse
+      });
+    }
+
+    console.log('✅ Image generated successfully:', imageUrl);
     res.json({ imageUrl, enhanced_prompt: enhancedPrompt });
   } catch (openaiErr) {
     console.error('🚨 OpenAI Error:', openaiErr.message);

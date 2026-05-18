@@ -62,6 +62,40 @@ function LoginGate({ onAuth }) {
   );
 }
 
+// ─── Remove white background from glasses image ───────────────────
+function removeWhiteBackground(imgSource, callback) {
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = img.width;
+    tempCanvas.height = img.height;
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCtx.drawImage(img, 0, 0);
+
+    const imgData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+    const data = imgData.data;
+
+    // Remove white pixels (255,255,255) and near-white pixels
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      const a = data[i + 3];
+
+      // If pixel is white or very light, make it transparent
+      if (r > 240 && g > 240 && b > 240) {
+        data[i + 3] = 0; // Make transparent
+      }
+    }
+
+    tempCtx.putImageData(imgData, 0, 0);
+    callback(tempCanvas.toDataURL('image/png'));
+  };
+  img.onerror = () => callback(imgSource); // Fallback to original
+  img.src = imgSource;
+}
+
 // ─── Canvas overlay helper ─────────────────────────────────────────
 function drawOverlay(canvas, photoUrl, glassesImgUrl, analysis) {
   const ctx = canvas.getContext('2d');
@@ -90,23 +124,26 @@ function drawOverlay(canvas, photoUrl, glassesImgUrl, analysis) {
     const glY = centerY - glH / 2.2; // Slightly above center for natural fit
 
     if (glassesImgUrl) {
-      const gImg = new Image();
-      gImg.crossOrigin = 'anonymous';
-      gImg.onload = () => {
-        ctx.globalAlpha = 0.85;
-        ctx.drawImage(gImg, glX, glY, glW, glH);
-        ctx.globalAlpha = 1;
-      };
-      gImg.onerror = () => drawFallbackGlasses(ctx, lx, rx, centerY, glW, glH, glX, glY);
-      gImg.src = glassesImgUrl;
+      // Remove white background and overlay
+      removeWhiteBackground(glassesImgUrl, (processedUrl) => {
+        const gImg = new Image();
+        gImg.crossOrigin = 'anonymous';
+        gImg.onload = () => {
+          ctx.globalAlpha = 0.9;
+          ctx.drawImage(gImg, glX, glY, glW, glH);
+          ctx.globalAlpha = 1;
+        };
+        gImg.onerror = () => drawFallbackGlasses(ctx, lx, rx, centerY, glW, glH, glX, glY);
+        gImg.src = processedUrl;
+      });
     } else {
       drawFallbackGlasses(ctx, lx, rx, centerY, glW, glH, glX, glY);
     }
 
-    // Eye position markers (debug)
-    ctx.fillStyle = 'rgba(201,162,39,0.6)';
-    ctx.beginPath(); ctx.arc(lx, ly, 5, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(rx, ry, 5, 0, Math.PI * 2); ctx.fill();
+    // Eye position markers (subtle)
+    ctx.fillStyle = 'rgba(201,162,39,0.4)';
+    ctx.beginPath(); ctx.arc(lx, ly, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(rx, ry, 3, 0, Math.PI * 2); ctx.fill();
   };
   img.src = photoUrl;
 }

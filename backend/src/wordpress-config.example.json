@@ -1,0 +1,11 @@
+{
+  "sites": [
+    {
+      "id": "site-azzabioptic",
+      "name": "Azzabioptic",
+      "url": "https://azzabioptic.com",
+      "jwtTokenEnvVar": "WORDPRESS_TOKEN_AZZABIOPTIC",
+      "description": "Main Azzabioptic website"
+    }
+  ]
+}

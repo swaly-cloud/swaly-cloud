@@ -1,0 +1,274 @@
+{
+  "name": "wordpress-connector",
+  "description": "MCP server for connecting and managing multiple WordPress sites",
+  "version": "1.0.0",
+  "resources": [
+    {
+      "uri": "wordpress://sites",
+      "name": "Connected WordPress Sites",
+      "description": "List of all connected WordPress sites",
+      "mimeType": "application/json"
+    },
+    {
+      "uri": "wordpress://sites/{siteId}/posts",
+      "name": "Posts",
+      "description": "Blog posts from a WordPress site",
+      "mimeType": "application/json"
+    },
+    {
+      "uri": "wordpress://sites/{siteId}/pages",
+      "name": "Pages",
+      "description": "Static pages from a WordPress site",
+      "mimeType": "application/json"
+    },
+    {
+      "uri": "wordpress://sites/{siteId}/users",
+      "name": "Users",
+      "description": "Users from a WordPress site",
+      "mimeType": "application/json"
+    },
+    {
+      "uri": "wordpress://sites/{siteId}/categories",
+      "name": "Categories",
+      "description": "Post categories from a WordPress site",
+      "mimeType": "application/json"
+    },
+    {
+      "uri": "wordpress://sites/{siteId}/tags",
+      "name": "Tags",
+      "description": "Post tags from a WordPress site",
+      "mimeType": "application/json"
+    },
+    {
+      "uri": "wordpress://sites/{siteId}/media",
+      "name": "Media",
+      "description": "Media library from a WordPress site",
+      "mimeType": "application/json"
+    }
+  ],
+  "tools": [
+    {
+      "name": "connect_wordpress_site",
+      "description": "Connect a new WordPress site using JWT token",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "siteUrl": {
+            "type": "string",
+            "description": "Base URL of the WordPress site (e.g., https://example.com)"
+          },
+          "jwtToken": {
+            "type": "string",
+            "description": "JWT authentication token for the WordPress site"
+          },
+          "siteName": {
+            "type": "string",
+            "description": "Display name for this site connection"
+          }
+        },
+        "required": ["siteUrl", "jwtToken"]
+      }
+    },
+    {
+      "name": "get_posts",
+      "description": "Retrieve posts from a connected WordPress site",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "siteId": {
+            "type": "string",
+            "description": "ID of the connected WordPress site"
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number for pagination",
+            "default": 1
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Number of posts per page",
+            "default": 10
+          },
+          "search": {
+            "type": "string",
+            "description": "Search term to filter posts"
+          }
+        },
+        "required": ["siteId"]
+      }
+    },
+    {
+      "name": "get_post",
+      "description": "Retrieve a specific post from a WordPress site",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "siteId": {
+            "type": "string",
+            "description": "ID of the connected WordPress site"
+          },
+          "postId": {
+            "type": "integer",
+            "description": "ID of the post to retrieve"
+          }
+        },
+        "required": ["siteId", "postId"]
+      }
+    },
+    {
+      "name": "create_post",
+      "description": "Create a new post on a WordPress site",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "siteId": {
+            "type": "string",
+            "description": "ID of the connected WordPress site"
+          },
+          "title": {
+            "type": "string",
+            "description": "Post title"
+          },
+          "content": {
+            "type": "string",
+            "description": "Post content (HTML supported)"
+          },
+          "excerpt": {
+            "type": "string",
+            "description": "Post excerpt"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["publish", "draft", "pending", "private"],
+            "description": "Post status",
+            "default": "draft"
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "Array of category IDs"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Array of tag names"
+          }
+        },
+        "required": ["siteId", "title", "content"]
+      }
+    },
+    {
+      "name": "update_post",
+      "description": "Update an existing post on a WordPress site",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "siteId": {
+            "type": "string",
+            "description": "ID of the connected WordPress site"
+          },
+          "postId": {
+            "type": "integer",
+            "description": "ID of the post to update"
+          },
+          "title": {
+            "type": "string",
+            "description": "New post title"
+          },
+          "content": {
+            "type": "string",
+            "description": "New post content"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["publish", "draft", "pending", "private"],
+            "description": "New post status"
+          }
+        },
+        "required": ["siteId", "postId"]
+      }
+    },
+    {
+      "name": "delete_post",
+      "description": "Delete a post from a WordPress site",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "siteId": {
+            "type": "string",
+            "description": "ID of the connected WordPress site"
+          },
+          "postId": {
+            "type": "integer",
+            "description": "ID of the post to delete"
+          },
+          "force": {
+            "type": "boolean",
+            "description": "Permanently delete instead of moving to trash",
+            "default": false
+          }
+        },
+        "required": ["siteId", "postId"]
+      }
+    },
+    {
+      "name": "get_pages",
+      "description": "Retrieve pages from a WordPress site",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "siteId": {
+            "type": "string",
+            "description": "ID of the connected WordPress site"
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number for pagination",
+            "default": 1
+          }
+        },
+        "required": ["siteId"]
+      }
+    },
+    {
+      "name": "get_categories",
+      "description": "Get all categories from a WordPress site",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "siteId": {
+            "type": "string",
+            "description": "ID of the connected WordPress site"
+          }
+        },
+        "required": ["siteId"]
+      }
+    },
+    {
+      "name": "list_connected_sites",
+      "description": "List all connected WordPress sites",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "disconnect_site",
+      "description": "Disconnect a WordPress site",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "siteId": {
+            "type": "string",
+            "description": "ID of the site to disconnect"
+          }
+        },
+        "required": ["siteId"]
+      }
+    }
+  ]
+}

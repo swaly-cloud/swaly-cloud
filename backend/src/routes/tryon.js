@@ -87,116 +87,59 @@ Réponds SEULEMENT le JSON, pas d'autres mots!`,
   res.json({ analysis, usage: message.usage });
 });
 
-// ─── GENERATE IMAGE WITH GPT-4o ──────────────────────────────────
+// ─── GENERATE IMAGE WITH gpt-image-1 ──────────────────────────────
 router.post('/generate', async (req, res) => {
-  const { analysis, product } = req.body;
+  const { photoBase64, photoMimeType = 'image/jpeg', productImageUrl, product, analysis } = req.body;
 
-  if (!analysis) return res.status(400).json({ error: 'Analyse requise' });
+  if (!photoBase64) return res.status(400).json({ error: 'Photo requise' });
 
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    console.error('❌ OPENAI_API_KEY not found in environment');
-    return res.status(500).json({ error: 'Clé API OpenAI manquante (OPENAI_API_KEY)' });
-  }
+  if (!apiKey) return res.status(500).json({ error: 'Clé API OpenAI manquante' });
 
-  console.log('🔑 Using OpenAI API key (length:', apiKey.length, ')');
   const openai = new OpenAI({ apiKey });
 
   const productDesc = product
-    ? `${product.brand} ${product.name} (${product.cat}, ${product.price} TND)`
+    ? `${product.brand} ${product.name} (${product.cat})`
     : 'une monture élégante';
 
   try {
-    // Use GPT-4o to craft ultra-detailed prompt
-    console.log('📝 Calling GPT-4o to enhance prompt...');
-    const detailedPrompt = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      max_tokens: 300,
-      messages: [{
-        role: 'user',
-        content: `Tu es un expert en photographie de produits optiques. Crée un prompt DALL-E ultra-détaillé pour générer une photo réaliste d'une personne portant ${productDesc}.
+    const prompt = `You are given a photo of a person. Place the glasses "${productDesc}" on their face naturally and realistically.
+- Preserve the person's face, identity, skin tone, lighting and background exactly
+- Position glasses precisely on the eyes, properly centered
+- Face shape: ${analysis?.faceShape || 'unknown'}
+- Make it look like a real photo, not edited
+- High quality, photorealistic result`;
 
-Données:
-- Forme du visage: ${analysis.faceShape}
-- Compatibilité: ${analysis.score}/100
-- Conseil: ${analysis.recommendation}
-
-Le prompt doit être:
-- Très détaillé et visuel
-- Studio professionnel, bonne lumière
-- Monture bien visible et ajustée
-- Fond légèrement flou (bokeh)
-- Style moderne et naturel
-- Haute résolution, couleurs vibrantes
-
-Réponds UNIQUEMENT avec le prompt, rien d'autre.`
-      }]
-    });
-
-    if (!detailedPrompt.choices?.[0]?.message?.content) {
-      console.error('❌ GPT-4o returned empty content:', detailedPrompt);
-      return res.status(500).json({ error: 'GPT-4o returned empty response' });
-    }
-
-    const enhancedPrompt = detailedPrompt.choices[0].message.content;
-    console.log('✅ GPT-4o prompt ready, calling DALL-E...');
-
-    // Generate image with gpt-image-1
-    console.log('🖼️ Calling images.generate with gpt-image-1...');
+    console.log('🖼️ Calling gpt-image-1 images.generate...');
     const imageResponse = await openai.images.generate({
       model: 'gpt-image-1',
-      prompt: enhancedPrompt,
+      prompt,
       n: 1,
       size: '1024x1024',
     });
 
-    console.log('🖼️ Raw response:', imageResponse);
-    console.log('🖼️ Response type:', typeof imageResponse);
     console.log('🖼️ Response keys:', Object.keys(imageResponse || {}));
-    console.log('🖼️ Response as JSON:', JSON.stringify(imageResponse, null, 2));
-    console.log('🖼️ imageResponse.data:', imageResponse?.data);
-    console.log('🖼️ imageResponse.data type:', typeof imageResponse?.data);
+    console.log('🖼️ data[0] keys:', Object.keys(imageResponse?.data?.[0] || {}));
 
-    // If it's an array
-    if (Array.isArray(imageResponse)) {
-      console.log('🖼️ Response is an array with length:', imageResponse.length);
-      console.log('🖼️ First element:', imageResponse[0]);
+    // gpt-image-1 returns base64 (b64_json), not a URL
+    const b64 = imageResponse?.data?.[0]?.b64_json;
+    if (b64) {
+      console.log('✅ Got base64 image from gpt-image-1');
+      return res.json({ imageUrl: `data:image/png;base64,${b64}` });
     }
 
-    // If it's a string (URL directly)
-    if (typeof imageResponse === 'string') {
-      console.log('🖼️ Response is a string (direct URL)');
+    // Fallback: try URL
+    const url = imageResponse?.data?.[0]?.url;
+    if (url) {
+      console.log('✅ Got URL image:', url);
+      return res.json({ imageUrl: url });
     }
 
-    // Extract URL from various possible locations
-    let imageUrl = null;
-    if (imageResponse?.data?.[0]?.url) {
-      imageUrl = imageResponse.data[0].url;
-    } else if (typeof imageResponse === 'string') {
-      imageUrl = imageResponse;
-    } else if (imageResponse?.url) {
-      imageUrl = imageResponse.url;
-    } else if (imageResponse?.[0]?.url) {
-      imageUrl = imageResponse[0].url;
-    }
-
-    console.log('🖼️ Extracted imageUrl:', imageUrl);
-
-    if (!imageUrl) {
-      console.error('❌ Could not extract image URL from response');
-      return res.status(500).json({
-        error: 'Could not extract image URL',
-        response_keys: Object.keys(imageResponse || {}),
-        response_type: typeof imageResponse
-      });
-    }
-
-    console.log('✅ Image generated successfully:', imageUrl);
-    res.json({ imageUrl, enhanced_prompt: enhancedPrompt });
-  } catch (openaiErr) {
-    console.error('🚨 OpenAI Error:', openaiErr.message);
-    console.error('🚨 Error details:', openaiErr.error || openaiErr.response?.data || openaiErr);
-    res.status(500).json({ error: `OpenAI Error: ${openaiErr.message}` });
+    console.error('❌ No image in response. Data:', imageResponse?.data);
+    res.status(500).json({ error: 'No image returned', data: imageResponse?.data });
+  } catch (err) {
+    console.error('🚨 Error:', err.message, err.error || '');
+    res.status(500).json({ error: `OpenAI Error: ${err.message}` });
   }
 });
 

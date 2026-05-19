@@ -159,8 +159,8 @@ export default function VirtualTryOn({ products = [] }) {
         }
       ).then(r => r.ok ? r.json() : r.json().then(e => { throw new Error(e.error); }));
 
-      // Generate image with DALL-E
-      console.log('🎨 Calling DALL-E endpoint...');
+      // Generate image with OpenAI Images Edit
+      console.log('🎨 Calling image edit endpoint...');
       const genRes = await fetch(
         `${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/tryon/generate`,
         {
@@ -169,18 +169,24 @@ export default function VirtualTryOn({ products = [] }) {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${localStorage.getItem('azzabi_admin_token')}`,
           },
-          body: JSON.stringify({ analysis: res, product: selectedProduct }),
+          body: JSON.stringify({
+            photoBase64: base64,
+            photoMimeType: mime,
+            productImageUrl: selectedProduct?.img,
+            product: selectedProduct,
+            analysis: res,
+          }),
         }
       );
 
       if (!genRes.ok) {
         const errData = await genRes.json();
-        console.error('🚨 DALL-E Error:', errData);
+        console.error('🚨 Generate Error:', errData);
         throw new Error(errData.error || `HTTP ${genRes.status}`);
       }
 
       const { imageUrl } = await genRes.json();
-      console.log('✅ DALL-E Success:', imageUrl);
+      console.log('✅ Image generated:', imageUrl?.substring(0, 60) + '...');
 
       setAnalysis({ ...res, generatedImageUrl: imageUrl });
       setStep('result');

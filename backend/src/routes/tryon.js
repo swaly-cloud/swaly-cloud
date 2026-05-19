@@ -106,15 +106,35 @@ router.post('/generate', async (req, res) => {
     const photoBuffer = Buffer.from(photoBase64, 'base64');
     const photoFile = new File([photoBuffer], 'photo.jpg', { type: photoMimeType });
 
-    const prompt = `Add glasses "${productDesc}" on the person's face in this photo.
-Keep the person's face, identity, skin tone, hair, lighting and background 100% identical.
-Only add the glasses on the eyes. Face shape: ${analysis?.faceShape || 'unknown'}.
-Photorealistic result, same photo style.`;
+    // Build images array: user photo + product image if available
+    const images = [photoFile];
 
-    console.log('🖼️ Calling gpt-image-1 images.edit with real photo...');
+    if (req.body.productImageUrl) {
+      try {
+        console.log('📥 Fetching product image:', req.body.productImageUrl);
+        const productRes = await fetch(req.body.productImageUrl);
+        if (productRes.ok) {
+          const productBuffer = Buffer.from(await productRes.arrayBuffer());
+          const productFile = new File([productBuffer], 'glasses.jpg', { type: 'image/jpeg' });
+          images.push(productFile);
+          console.log('✅ Product image added as reference');
+        }
+      } catch (e) {
+        console.warn('⚠️ Could not fetch product image:', e.message);
+      }
+    }
+
+    const prompt = images.length > 1
+      ? `The second image shows the exact glasses/sunglasses to use. Place EXACTLY those glasses from the second image onto the person's face in the first image.
+Keep the person's face, identity, skin tone, hair, lighting and background 100% identical.
+Only add those specific glasses on the eyes. Face shape: ${analysis?.faceShape || 'unknown'}.
+Photorealistic result.`
+      : `Add glasses "${productDesc}" on the person's face. Keep everything else identical. Photorealistic.`;
+
+    console.log('🖼️ Calling gpt-image-1 images.edit with', images.length, 'image(s)...');
     const imageResponse = await openai.images.edit({
       model: 'gpt-image-1',
-      image: photoFile,
+      image: images.length === 1 ? images[0] : images,
       prompt,
       n: 1,
       size: '1024x1024',

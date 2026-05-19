@@ -99,7 +99,7 @@ export default function VirtualTryOn({ products = [] }) {
 
   // Mark products as loaded when available
   useEffect(() => {
-    if (eyewearProducts.length > 0) {
+    if (products && products.length > 0) {
       setProductsLoaded(true);
     }
   }, [products]);

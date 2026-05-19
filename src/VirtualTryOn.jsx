@@ -181,7 +181,9 @@ export default function VirtualTryOn({ products = [] }) {
   const [photoBlob, setPhotoBlob] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [analysis, setAnalysis] = useState(null);
+  const [generatedImage, setGeneratedImage] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [generatingImage, setGeneratingImage] = useState(false);
   const [err, setErr] = useState('');
   const [cameraOn, setCameraOn] = useState(false);
   const [step, setStep] = useState('pick'); // pick | camera | product | result
@@ -280,7 +282,39 @@ export default function VirtualTryOn({ products = [] }) {
     }
   }, [step, analysis]);
 
-  const reset = () => { setPhoto(null); setPhotoBlob(null); setSelectedProduct(null); setAnalysis(null); setErr(''); setStep('pick'); stopCamera(); };
+  // Generate realistic image with AI
+  const generateImage = useCallback(async () => {
+    if (!photo || !selectedProduct || !analysis) return;
+    setGeneratingImage(true);
+    setErr('');
+    try {
+      const base64 = photo.split(',')[1];
+      const mime = photo.split(';')[0].split(':')[1];
+      const { imageUrl } = await fetch(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/tryon/generate`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('azzabi_admin_token')}`,
+          },
+          body: JSON.stringify({
+            photoBase64: base64,
+            photoMimeType: mime,
+            product: selectedProduct,
+            analysis,
+          }),
+        }
+      ).then(r => r.ok ? r.json() : r.json().then(e => { throw new Error(e.error); }));
+      setGeneratedImage(imageUrl);
+    } catch (e) {
+      setErr(e.message || 'Erreur lors de la génération');
+    } finally {
+      setGeneratingImage(false);
+    }
+  }, [photo, selectedProduct, analysis]);
+
+  const reset = () => { setPhoto(null); setPhotoBlob(null); setSelectedProduct(null); setAnalysis(null); setGeneratedImage(null); setErr(''); setStep('pick'); stopCamera(); };
 
   if (!authed) return <LoginGate onAuth={() => setAuthed(true)} />;
 
@@ -401,9 +435,13 @@ export default function VirtualTryOn({ products = [] }) {
         {/* ── STEP: RESULT ── */}
         {step === 'result' && analysis && (
           <div style={{ display: 'grid', gap: 12 }}>
-            {/* Canvas with overlay */}
-            <div style={{ borderRadius: 14, overflow: 'hidden', border: `1px solid ${C.bd}` }}>
-              <canvas ref={canvasRef} style={{ width: '100%', display: 'block' }} />
+            {/* Generated image or Canvas overlay */}
+            <div style={{ borderRadius: 14, overflow: 'hidden', border: `1px solid ${C.bd}`, background: C.cd }}>
+              {generatedImage ? (
+                <img src={generatedImage} alt="result" style={{ width: '100%', display: 'block' }} />
+              ) : (
+                <canvas ref={canvasRef} style={{ width: '100%', display: 'block' }} />
+              )}
             </div>
 
             {/* Score + face shape */}
@@ -440,6 +478,12 @@ export default function VirtualTryOn({ products = [] }) {
               <p style={{ margin: '0 0 8px', fontSize: 12, color: C.tx, lineHeight: 1.6 }}>{analysis.recommendation}</p>
               {analysis.tips && <p style={{ margin: 0, fontSize: 11, color: C.mu, lineHeight: 1.5, fontStyle: 'italic' }}>💡 {analysis.tips}</p>}
             </div>
+
+            {!generatedImage && (
+              <button onClick={generateImage} disabled={generatingImage} style={{ width: '100%', padding: '13px', borderRadius: 10, border: 'none', background: C.goldGrad, color: '#0a0a0f', fontSize: 14, fontWeight: 700, cursor: generatingImage ? 'not-allowed' : 'pointer', fontFamily: S, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all .15s', opacity: generatingImage ? 0.7 : 1 }}>
+                <Sparkles size={16} />{generatingImage ? 'Génération en cours…' : 'Générer image réaliste'}
+              </button>
+            )}
 
             <button onClick={reset} style={{ width: '100%', padding: '12px', borderRadius: 10, border: `1px solid ${C.bd}`, background: 'transparent', color: C.mu, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: S }}>
               Nouvel essayage

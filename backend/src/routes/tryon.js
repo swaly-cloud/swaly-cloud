@@ -87,9 +87,9 @@ Réponds SEULEMENT le JSON, pas d'autres mots!`,
   res.json({ analysis, usage: message.usage });
 });
 
-// ─── GENERATE IMAGE WITH gpt-image-1 ──────────────────────────────
+// ─── EDIT REAL PHOTO WITH gpt-image-1 ─────────────────────────────
 router.post('/generate', async (req, res) => {
-  const { photoBase64, photoMimeType = 'image/jpeg', productImageUrl, product, analysis } = req.body;
+  const { photoBase64, photoMimeType = 'image/jpeg', product, analysis } = req.body;
 
   if (!photoBase64) return res.status(400).json({ error: 'Photo requise' });
 
@@ -103,39 +103,34 @@ router.post('/generate', async (req, res) => {
     : 'une monture élégante';
 
   try {
-    const prompt = `You are given a photo of a person. Place the glasses "${productDesc}" on their face naturally and realistically.
-- Preserve the person's face, identity, skin tone, lighting and background exactly
-- Position glasses precisely on the eyes, properly centered
-- Face shape: ${analysis?.faceShape || 'unknown'}
-- Make it look like a real photo, not edited
-- High quality, photorealistic result`;
+    const photoBuffer = Buffer.from(photoBase64, 'base64');
+    const photoFile = new File([photoBuffer], 'photo.jpg', { type: photoMimeType });
 
-    console.log('🖼️ Calling gpt-image-1 images.generate...');
-    const imageResponse = await openai.images.generate({
+    const prompt = `Add glasses "${productDesc}" on the person's face in this photo.
+Keep the person's face, identity, skin tone, hair, lighting and background 100% identical.
+Only add the glasses on the eyes. Face shape: ${analysis?.faceShape || 'unknown'}.
+Photorealistic result, same photo style.`;
+
+    console.log('🖼️ Calling gpt-image-1 images.edit with real photo...');
+    const imageResponse = await openai.images.edit({
       model: 'gpt-image-1',
+      image: photoFile,
       prompt,
       n: 1,
       size: '1024x1024',
     });
 
-    console.log('🖼️ Response keys:', Object.keys(imageResponse || {}));
     console.log('🖼️ data[0] keys:', Object.keys(imageResponse?.data?.[0] || {}));
 
-    // gpt-image-1 returns base64 (b64_json), not a URL
     const b64 = imageResponse?.data?.[0]?.b64_json;
     if (b64) {
-      console.log('✅ Got base64 image from gpt-image-1');
+      console.log('✅ Got edited image as base64');
       return res.json({ imageUrl: `data:image/png;base64,${b64}` });
     }
 
-    // Fallback: try URL
     const url = imageResponse?.data?.[0]?.url;
-    if (url) {
-      console.log('✅ Got URL image:', url);
-      return res.json({ imageUrl: url });
-    }
+    if (url) return res.json({ imageUrl: url });
 
-    console.error('❌ No image in response. Data:', imageResponse?.data);
     res.status(500).json({ error: 'No image returned', data: imageResponse?.data });
   } catch (err) {
     console.error('🚨 Error:', err.message, err.error || '');

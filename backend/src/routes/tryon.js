@@ -106,35 +106,56 @@ router.post('/generate', async (req, res) => {
     const photoBuffer = Buffer.from(photoBase64, 'base64');
     const photoFile = new File([photoBuffer], 'photo.jpg', { type: photoMimeType });
 
-    // Build images array: user photo + product image if available
-    const images = [photoFile];
+    // Create mask PNG: transparent only around eyes (where glasses go)
+    // Opaque everywhere else (to preserve face)
+    console.log('🎭 Creating transparency mask for eye area...');
+    const { createCanvas } = await import('canvas');
+    const canvas = createCanvas(1024, 1024);
+    const ctx = canvas.getContext('2d');
 
+    // Start with fully opaque white (preserve everything)
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, 1024, 1024);
+
+    // Make eye area transparent (where glasses will go)
+    const leftEyeX = (analysis?.leftEye?.x || 0.35) * 1024;
+    const leftEyeY = (analysis?.leftEye?.y || 0.42) * 1024;
+    const rightEyeX = (analysis?.rightEye?.x || 0.65) * 1024;
+    const rightEyeY = (analysis?.rightEye?.y || 0.42) * 1024;
+    const eyeRadius = 120; // radius around each eye
+
+    ctx.clearRect(leftEyeX - eyeRadius, leftEyeY - eyeRadius * 0.8, eyeRadius * 2, eyeRadius * 1.6);
+    ctx.clearRect(rightEyeX - eyeRadius, rightEyeY - eyeRadius * 0.8, eyeRadius * 2, eyeRadius * 1.6);
+
+    const maskBuffer = canvas.toBuffer('image/png');
+    const maskFile = new File([maskBuffer], 'mask.png', { type: 'image/png' });
+
+    // Get product image for reference
+    const images = [photoFile];
     if (req.body.productImageUrl) {
       try {
-        console.log('📥 Fetching product image:', req.body.productImageUrl);
         const productRes = await fetch(req.body.productImageUrl);
         if (productRes.ok) {
           const productBuffer = Buffer.from(await productRes.arrayBuffer());
           const productFile = new File([productBuffer], 'glasses.jpg', { type: 'image/jpeg' });
           images.push(productFile);
-          console.log('✅ Product image added as reference');
         }
       } catch (e) {
-        console.warn('⚠️ Could not fetch product image:', e.message);
+        console.warn('⚠️ Could not fetch product image');
       }
     }
 
     const prompt = images.length > 1
-      ? `The second image shows the exact glasses/sunglasses to use. Place EXACTLY those glasses from the second image onto the person's face in the first image.
-Keep the person's face, identity, skin tone, hair, lighting and background 100% identical.
-Only add those specific glasses on the eyes. Face shape: ${analysis?.faceShape || 'unknown'}.
-Photorealistic result.`
-      : `Add glasses "${productDesc}" on the person's face. Keep everything else identical. Photorealistic.`;
+      ? `CRITICAL: The second image shows the EXACT glasses to place. Use EXACTLY those glasses.
+Place them on the eyes using the mask provided. Keep face, skin, hair, background 100% identical.
+Only modify the eye area - preserve everything else.`
+      : `Place ${productDesc} on the eyes only. Keep face, skin, hair, background identical. Use mask to preserve face.`;
 
-    console.log('🖼️ Calling gpt-image-1 images.edit with', images.length, 'image(s)...');
+    console.log('🖼️ Calling gpt-image-1 images.edit with mask and product reference...');
     const imageResponse = await openai.images.edit({
       model: 'gpt-image-1',
       image: images.length === 1 ? images[0] : images,
+      mask: maskFile,
       prompt,
       n: 1,
       size: '1024x1024',

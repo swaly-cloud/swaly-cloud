@@ -308,7 +308,7 @@ export default function VirtualTryOn({ products = [] }) {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
-              {eyewearProducts.slice(0, 12).map(p => (
+              {eyewearProducts.map(p => (
                 <button key={p.id} onClick={() => setSelectedProduct(p)} style={{ padding: '10px 8px', borderRadius: 10, border: `1.5px solid ${selectedProduct?.id === p.id ? C.ac : C.bd}`, background: selectedProduct?.id === p.id ? C.as : C.cd, cursor: 'pointer', textAlign: 'left', transition: 'all .15s' }}>
                   <div style={{ width: '100%', aspectRatio: '16/9', borderRadius: 7, overflow: 'hidden', marginBottom: 7, background: '#1a1a26' }}>
                     {p.img ? <img src={p.img} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Eye size={18} color={C.mu} /></div>}

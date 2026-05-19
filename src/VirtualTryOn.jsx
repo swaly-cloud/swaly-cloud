@@ -87,6 +87,7 @@ export default function VirtualTryOn({ products = [] }) {
   const [cameraOn, setCameraOn] = useState(false);
   const [step, setStep] = useState('pick'); // pick | camera | product | result
   const [productPage, setProductPage] = useState(0);
+  const [productsLoaded, setProductsLoaded] = useState(false);
   const videoRef = useRef(null);
   const streamRef = useRef(null);
 
@@ -95,6 +96,13 @@ export default function VirtualTryOn({ products = [] }) {
     const t = localStorage.getItem('azzabi_admin_token');
     if (t) setAuthed(true);
   }, []);
+
+  // Mark products as loaded when available
+  useEffect(() => {
+    if (eyewearProducts.length > 0) {
+      setProductsLoaded(true);
+    }
+  }, [products]);
 
   // Start webcam
   const startCamera = useCallback(async () => {
@@ -308,8 +316,16 @@ export default function VirtualTryOn({ products = [] }) {
               Choisir la monture à essayer
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
-              {eyewearProducts.slice(productPage * 12, (productPage + 1) * 12).map(p => (
+            {!productsLoaded ? (
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 300, gap: 8 }}>
+                <div style={{ width: 12, height: 12, borderRadius: '50%', background: C.ac, animation: 'bounce 1.4s infinite', animationDelay: '0s' }} />
+                <div style={{ width: 12, height: 12, borderRadius: '50%', background: C.ac, animation: 'bounce 1.4s infinite', animationDelay: '0.2s' }} />
+                <div style={{ width: 12, height: 12, borderRadius: '50%', background: C.ac, animation: 'bounce 1.4s infinite', animationDelay: '0.4s' }} />
+                <style>{`@keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }`}</style>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+                {eyewearProducts.slice(productPage * 12, (productPage + 1) * 12).map(p => (
                 <button key={p.id} onClick={() => setSelectedProduct(p)} style={{ padding: '10px 8px', borderRadius: 10, border: `1.5px solid ${selectedProduct?.id === p.id ? C.ac : C.bd}`, background: selectedProduct?.id === p.id ? C.as : C.cd, cursor: 'pointer', textAlign: 'left', transition: 'all .15s' }}>
                   <div style={{ width: '100%', aspectRatio: '16/9', borderRadius: 7, overflow: 'hidden', marginBottom: 7, background: '#1a1a26' }}>
                     {p.img ? <img src={p.img} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Eye size={18} color={C.mu} /></div>}
@@ -317,8 +333,9 @@ export default function VirtualTryOn({ products = [] }) {
                   <div style={{ fontSize: 9, color: C.mu, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em' }}>{p.brand}</div>
                   <div style={{ fontSize: 11, color: C.tx, fontWeight: 600, lineHeight: 1.3, marginTop: 2 }}>{p.name}</div>
                 </button>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
 
             {/* Pagination */}
             {eyewearProducts.length > 12 && (

@@ -159,34 +159,45 @@ export default function VirtualTryOn({ products = [] }) {
         }
       ).then(r => r.ok ? r.json() : r.json().then(e => { throw new Error(e.error); }));
 
-      // Generate image with OpenAI Images Edit
-      console.log('🎨 Calling image edit endpoint...');
-      const genRes = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/tryon/generate`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('azzabi_admin_token')}`,
-          },
-          body: JSON.stringify({
-            photoBase64: base64,
-            photoMimeType: mime,
-            productImageUrl: selectedProduct?.img,
-            product: selectedProduct,
-            analysis: res,
-          }),
-        }
-      );
+      // Generate image with OpenAI
+      console.log('🎨 Calling image generate endpoint...');
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 120000); // 2 min timeout
+      let genRes;
+      try {
+        genRes = await fetch(
+          `${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/tryon/generate`,
+          {
+            method: 'POST',
+            signal: controller.signal,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('azzabi_admin_token')}`,
+            },
+            body: JSON.stringify({
+              photoBase64: base64,
+              photoMimeType: mime,
+              productImageUrl: selectedProduct?.img,
+              product: selectedProduct,
+              analysis: res,
+            }),
+          }
+        );
+      } finally {
+        clearTimeout(timeout);
+      }
 
       if (!genRes.ok) {
-        const errData = await genRes.json();
+        const errData = await genRes.json().catch(() => ({ error: `HTTP ${genRes.status}` }));
         console.error('🚨 Generate Error:', errData);
         throw new Error(errData.error || `HTTP ${genRes.status}`);
       }
 
-      const { imageUrl } = await genRes.json();
-      console.log('✅ Image generated:', imageUrl?.substring(0, 60) + '...');
+      const genData = await genRes.json();
+      console.log('✅ Generate response keys:', Object.keys(genData));
+      const { imageUrl } = genData;
+      if (!imageUrl) throw new Error('Aucune image retournée par le serveur');
+      console.log('✅ Image generated, length:', imageUrl?.length);
 
       setAnalysis({ ...res, generatedImageUrl: imageUrl });
       setStep('result');
@@ -311,7 +322,7 @@ export default function VirtualTryOn({ products = [] }) {
             {err && <div style={{ padding: '9px 12px', borderRadius: 8, background: C.eb, border: `1px solid ${C.ee}`, fontSize: 12, color: C.er, marginBottom: 10 }}>{err}</div>}
 
             <button onClick={analyze} disabled={!selectedProduct || loading} style={{ width: '100%', padding: '13px', borderRadius: 10, border: 'none', background: selectedProduct ? C.goldGrad : C.bd, color: selectedProduct ? '#0a0a0f' : C.mu, fontSize: 14, fontWeight: 700, cursor: selectedProduct ? 'pointer' : 'not-allowed', fontFamily: S, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all .15s' }}>
-              <Sparkles size={16} />{loading ? 'Analyse en cours…' : 'Analyser avec Claude'}
+              <Sparkles size={16} />{loading ? 'Génération en cours… (1-2 min)' : 'Analyser avec Claude'}
             </button>
           </div>
         )}

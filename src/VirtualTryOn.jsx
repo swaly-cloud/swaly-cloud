@@ -181,8 +181,10 @@ export default function VirtualTryOn({ products = [] }) {
   const [photoBlob, setPhotoBlob] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [analysis, setAnalysis] = useState(null);
+  const [recommendations, setRecommendations] = useState(null);
   const [generatedImage, setGeneratedImage] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [recommendingLoading, setRecommendingLoading] = useState(false);
   const [generatingImage, setGeneratingImage] = useState(false);
   const [err, setErr] = useState('');
   const [cameraOn, setCameraOn] = useState(false);
@@ -264,8 +266,9 @@ export default function VirtualTryOn({ products = [] }) {
       setAnalysis(res);
       setStep('result');
 
-      // Draw overlay after state update
+      // Get recommendations based on face shape
       setTimeout(() => {
+        getRecommendations(res.faceShape);
         if (canvasRef.current) drawOverlay(canvasRef.current, photo, selectedProduct.img, res);
       }, 100);
     } catch (e) {
@@ -274,6 +277,31 @@ export default function VirtualTryOn({ products = [] }) {
       setLoading(false);
     }
   }, [photo, selectedProduct]);
+
+  // Get product recommendations based on face shape
+  const getRecommendations = useCallback(async (faceShape) => {
+    if (!faceShape || !products.length) return;
+    setRecommendingLoading(true);
+    try {
+      const eyewearOnly = products.filter(p => p.cat === 'soleil' || p.cat === 'vue');
+      const { recommendations: recs } = await fetch(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/tryon/recommend`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('azzabi_admin_token')}`,
+          },
+          body: JSON.stringify({ faceShape, products: eyewearOnly }),
+        }
+      ).then(r => r.ok ? r.json() : r.json().then(e => { throw new Error(e.error); }));
+      setRecommendations(recs);
+    } catch (e) {
+      console.warn('Recommendation error:', e.message);
+    } finally {
+      setRecommendingLoading(false);
+    }
+  }, [products]);
 
   // Redraw when result mounts
   useEffect(() => {
@@ -314,7 +342,17 @@ export default function VirtualTryOn({ products = [] }) {
     }
   }, [photo, selectedProduct, analysis]);
 
-  const reset = () => { setPhoto(null); setPhotoBlob(null); setSelectedProduct(null); setAnalysis(null); setGeneratedImage(null); setErr(''); setStep('pick'); stopCamera(); };
+  const reset = () => {
+    setPhoto(null);
+    setPhotoBlob(null);
+    setSelectedProduct(null);
+    setAnalysis(null);
+    setRecommendations(null);
+    setGeneratedImage(null);
+    setErr('');
+    setStep('pick');
+    stopCamera();
+  };
 
   if (!authed) return <LoginGate onAuth={() => setAuthed(true)} />;
 
@@ -478,6 +516,57 @@ export default function VirtualTryOn({ products = [] }) {
               <p style={{ margin: '0 0 8px', fontSize: 12, color: C.tx, lineHeight: 1.6 }}>{analysis.recommendation}</p>
               {analysis.tips && <p style={{ margin: 0, fontSize: 11, color: C.mu, lineHeight: 1.5, fontStyle: 'italic' }}>💡 {analysis.tips}</p>}
             </div>
+
+            {/* Top recommendations */}
+            {recommendations?.length > 0 && (
+              <div style={{ padding: '14px', borderRadius: 10, background: C.cd, border: `1px solid ${C.bd}` }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
+                  <Sparkles size={13} color={C.ac} />
+                  <span style={{ fontSize: 10, fontWeight: 700, color: C.ac, textTransform: 'uppercase', letterSpacing: '.06em' }}>Top recommandations</span>
+                </div>
+                <div style={{ display: 'grid', gap: 8 }}>
+                  {recommendations.map((rec, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        setSelectedProduct(rec.product);
+                        setGeneratedImage(null);
+                      }}
+                      style={{
+                        padding: '10px 12px',
+                        borderRadius: 8,
+                        border: `1px solid ${C.bd}`,
+                        background: selectedProduct?.id === rec.product?.id ? C.as : 'transparent',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        transition: 'all .15s',
+                      }}
+                    >
+                      <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                        {rec.product?.img && (
+                          <img
+                            src={rec.product.img}
+                            alt={rec.product.name}
+                            style={{
+                              width: 40,
+                              height: 28,
+                              objectFit: 'cover',
+                              borderRadius: 5,
+                              flexShrink: 0,
+                            }}
+                          />
+                        )}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 10, color: C.mu, fontWeight: 600 }}>{rec.product?.brand}</div>
+                          <div style={{ fontSize: 12, color: C.tx, fontWeight: 600, marginBottom: 3 }}>{rec.product?.name}</div>
+                          <div style={{ fontSize: 10, color: C.ac, fontStyle: 'italic' }}>→ {rec.reason}</div>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {!generatedImage && (
               <button onClick={generateImage} disabled={generatingImage} style={{ width: '100%', padding: '13px', borderRadius: 10, border: 'none', background: C.goldGrad, color: '#0a0a0f', fontSize: 14, fontWeight: 700, cursor: generatingImage ? 'not-allowed' : 'pointer', fontFamily: S, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all .15s', opacity: generatingImage ? 0.7 : 1 }}>

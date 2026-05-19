@@ -128,6 +128,65 @@ Réponds uniquement avec le JSON, sans texte autour.`,
   res.json({ analysis, usage: message.usage });
 });
 
+// ─── RECOMMEND BEST FRAMES ─────────────────────────────────────────
+router.post('/recommend', async (req, res) => {
+  const { faceShape, products } = req.body;
+
+  if (!faceShape || !products?.length) {
+    return res.status(400).json({ error: 'Forme du visage et catalogue requis' });
+  }
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return res.status(500).json({ error: 'Clé API Anthropic manquante' });
+  }
+
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+  const productList = products.map((p, i) => `${i + 1}. ${p.brand} ${p.name}`).join('\n');
+
+  const message = await client.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 512,
+    messages: [{
+      role: 'user',
+      content: `Tu es un expert en optique et morphologie. Une personne avec un visage ${faceShape} cherche les meilleures montures.
+
+Voici le catalogue disponible:
+${productList}
+
+Recommande les 3 meilleures montures NUMÉROTÉES de ce catalogue qui s'adapteraient le mieux à cette morphologie, et explique pourquoi en 2-3 mots par monture.
+
+Réponds UNIQUEMENT au format JSON (aucun texte avant/après):
+{
+  "recommendations": [
+    { "number": 1, "reason": "explication courte" },
+    { "number": 2, "reason": "explication courte" },
+    { "number": 3, "reason": "explication courte" }
+  ]
+}`,
+    }],
+  });
+
+  const raw = message.content[0].text.trim();
+  let recommendations;
+  try {
+    const match = raw.match(/\{[\s\S]*\}/);
+    recommendations = JSON.parse(match ? match[0] : raw);
+  } catch {
+    recommendations = { recommendations: [] };
+  }
+
+  // Convert recommendation numbers to actual product indices
+  const topProducts = recommendations.recommendations
+    .slice(0, 3)
+    .map(rec => ({
+      product: products[rec.number - 1],
+      reason: rec.reason,
+    }))
+    .filter(r => r.product);
+
+  res.json({ recommendations: topProducts });
+});
+
 // ─── EDIT REAL PHOTO WITH gpt-image-1 + TRANSPARENCY MASK ─────────────────────────────
 router.post('/generate', async (req, res) => {
   const { photoBase64, photoMimeType = 'image/jpeg', product, analysis } = req.body;

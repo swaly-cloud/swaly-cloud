@@ -86,6 +86,7 @@ export default function VirtualTryOn({ products = [] }) {
   const [err, setErr] = useState('');
   const [cameraOn, setCameraOn] = useState(false);
   const [step, setStep] = useState('pick'); // pick | camera | product | result
+  const [productPage, setProductPage] = useState(0);
   const videoRef = useRef(null);
   const streamRef = useRef(null);
 
@@ -307,8 +308,8 @@ export default function VirtualTryOn({ products = [] }) {
               Choisir la monture à essayer
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
-              {eyewearProducts.map(p => (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+              {eyewearProducts.slice(productPage * 12, (productPage + 1) * 12).map(p => (
                 <button key={p.id} onClick={() => setSelectedProduct(p)} style={{ padding: '10px 8px', borderRadius: 10, border: `1.5px solid ${selectedProduct?.id === p.id ? C.ac : C.bd}`, background: selectedProduct?.id === p.id ? C.as : C.cd, cursor: 'pointer', textAlign: 'left', transition: 'all .15s' }}>
                   <div style={{ width: '100%', aspectRatio: '16/9', borderRadius: 7, overflow: 'hidden', marginBottom: 7, background: '#1a1a26' }}>
                     {p.img ? <img src={p.img} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Eye size={18} color={C.mu} /></div>}
@@ -318,6 +319,21 @@ export default function VirtualTryOn({ products = [] }) {
                 </button>
               ))}
             </div>
+
+            {/* Pagination */}
+            {eyewearProducts.length > 12 && (
+              <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center', justifyContent: 'center' }}>
+                <button onClick={() => setProductPage(Math.max(0, productPage - 1))} disabled={productPage === 0} style={{ padding: '8px 12px', borderRadius: 8, border: `1px solid ${C.bd}`, background: productPage === 0 ? C.bd : C.cd, color: C.tx, cursor: productPage === 0 ? 'not-allowed' : 'pointer', fontSize: 12, fontWeight: 600 }}>
+                  ← Précédent
+                </button>
+                <span style={{ fontSize: 12, color: C.mu, minWidth: 80, textAlign: 'center' }}>
+                  Page {productPage + 1} / {Math.ceil(eyewearProducts.length / 12)}
+                </span>
+                <button onClick={() => setProductPage(Math.min(Math.ceil(eyewearProducts.length / 12) - 1, productPage + 1))} disabled={productPage >= Math.ceil(eyewearProducts.length / 12) - 1} style={{ padding: '8px 12px', borderRadius: 8, border: `1px solid ${C.bd}`, background: productPage >= Math.ceil(eyewearProducts.length / 12) - 1 ? C.bd : C.cd, color: C.tx, cursor: productPage >= Math.ceil(eyewearProducts.length / 12) - 1 ? 'not-allowed' : 'pointer', fontSize: 12, fontWeight: 600 }}>
+                  Suivant →
+                </button>
+              </div>
+            )}
 
             {err && <div style={{ padding: '9px 12px', borderRadius: 8, background: C.eb, border: `1px solid ${C.ee}`, fontSize: 12, color: C.er, marginBottom: 10 }}>{err}</div>}
 

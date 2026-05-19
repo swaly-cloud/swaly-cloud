@@ -99,46 +99,24 @@ router.post('/generate', async (req, res) => {
   const openai = new OpenAI({ apiKey });
 
   const productDesc = product
-    ? `${product.brand} ${product.name} (${product.cat})`
+    ? `${product.brand} ${product.name}`
     : 'une monture élégante';
 
   try {
     const photoBuffer = Buffer.from(photoBase64, 'base64');
     const photoFile = new File([photoBuffer], 'photo.jpg', { type: photoMimeType });
 
-    // Create mask PNG: transparent only around eyes (where glasses go)
-    // Opaque everywhere else (to preserve face)
-    console.log('🎭 Creating transparency mask for eye area...');
-    const { createCanvas } = await import('canvas');
-    const canvas = createCanvas(1024, 1024);
-    const ctx = canvas.getContext('2d');
-
-    // Start with fully opaque white (preserve everything)
-    ctx.fillStyle = 'white';
-    ctx.fillRect(0, 0, 1024, 1024);
-
-    // Make eye area transparent (where glasses will go)
-    const leftEyeX = (analysis?.leftEye?.x || 0.35) * 1024;
-    const leftEyeY = (analysis?.leftEye?.y || 0.42) * 1024;
-    const rightEyeX = (analysis?.rightEye?.x || 0.65) * 1024;
-    const rightEyeY = (analysis?.rightEye?.y || 0.42) * 1024;
-    const eyeRadius = 120; // radius around each eye
-
-    ctx.clearRect(leftEyeX - eyeRadius, leftEyeY - eyeRadius * 0.8, eyeRadius * 2, eyeRadius * 1.6);
-    ctx.clearRect(rightEyeX - eyeRadius, rightEyeY - eyeRadius * 0.8, eyeRadius * 2, eyeRadius * 1.6);
-
-    const maskBuffer = canvas.toBuffer('image/png');
-    const maskFile = new File([maskBuffer], 'mask.png', { type: 'image/png' });
-
     // Get product image for reference
     const images = [photoFile];
     if (req.body.productImageUrl) {
       try {
+        console.log('📥 Fetching product image:', req.body.productImageUrl);
         const productRes = await fetch(req.body.productImageUrl);
         if (productRes.ok) {
           const productBuffer = Buffer.from(await productRes.arrayBuffer());
           const productFile = new File([productBuffer], 'glasses.jpg', { type: 'image/jpeg' });
           images.push(productFile);
+          console.log('✅ Product image added as reference');
         }
       } catch (e) {
         console.warn('⚠️ Could not fetch product image');
@@ -146,22 +124,26 @@ router.post('/generate', async (req, res) => {
     }
 
     const prompt = images.length > 1
-      ? `CRITICAL: The second image shows the EXACT glasses to place. Use EXACTLY those glasses.
-Place them on the eyes using the mask provided. Keep face, skin, hair, background 100% identical.
-Only modify the eye area - preserve everything else.`
-      : `Place ${productDesc} on the eyes only. Keep face, skin, hair, background identical. Use mask to preserve face.`;
+      ? `IMPORTANT: Place EXACTLY the glasses from the second image on the person's face in the first image.
+The person's face, identity, skin tone, hair color, facial hair, lighting, background - EVERYTHING must remain 100% identical.
+ONLY change: add the exact glasses from image 2 on the eyes.
+Do NOT modify anything else. Do NOT change skin. Do NOT change hair. Do NOT change face shape.
+Photorealistic. Ultra-precise. Only the glasses change.`
+      : `Place ${productDesc} on the eyes ONLY.
+Keep: face shape, skin tone, hair, facial hair, lighting, background - everything identical.
+ONLY add the glasses. Do NOT modify the face at all.
+Photorealistic.`;
 
-    console.log('🖼️ Calling gpt-image-1 images.edit with mask and product reference...');
+    console.log('🖼️ Calling gpt-image-1 images.edit with product reference...');
     const imageResponse = await openai.images.edit({
       model: 'gpt-image-1',
       image: images.length === 1 ? images[0] : images,
-      mask: maskFile,
       prompt,
       n: 1,
       size: '1024x1024',
     });
 
-    console.log('🖼️ data[0] keys:', Object.keys(imageResponse?.data?.[0] || {}));
+    console.log('🖼️ Response keys:', Object.keys(imageResponse?.data?.[0] || {}));
 
     const b64 = imageResponse?.data?.[0]?.b64_json;
     if (b64) {
@@ -170,7 +152,10 @@ Only modify the eye area - preserve everything else.`
     }
 
     const url = imageResponse?.data?.[0]?.url;
-    if (url) return res.json({ imageUrl: url });
+    if (url) {
+      console.log('✅ Got URL:', url);
+      return res.json({ imageUrl: url });
+    }
 
     res.status(500).json({ error: 'No image returned', data: imageResponse?.data });
   } catch (err) {

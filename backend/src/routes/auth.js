@@ -21,7 +21,7 @@ router.post('/login', (req, res) => {
     return res.status(401).json({ error: 'Identifiants incorrects' });
   }
 
-  const token = jwt.sign({ email, role: 'admin' }, SECRET, { expiresIn: '24h' });
+  const token = jwt.sign({ email, role: 'admin' }, SECRET, { expiresIn: '7d' });
   res.json({ token, admin: { email, role: 'admin' } });
 });
 

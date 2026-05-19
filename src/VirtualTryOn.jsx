@@ -213,7 +213,7 @@ export default function VirtualTryOn({ products = [] }) {
 
   if (!authed) return <LoginGate onAuth={() => setAuthed(true)} />;
 
-  const eyewearProducts = products.filter(p => p.cat === 'soleil' || p.cat === 'vue');
+  const eyewearProducts = products.filter(p => !p.cat?.toLowerCase().includes('lentille'));
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg, color: C.tx, fontFamily: S, paddingBottom: 100 }}>

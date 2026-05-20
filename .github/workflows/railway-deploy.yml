@@ -1,0 +1,26 @@
+name: Deploy Backend to Railway
+
+on:
+  push:
+    branches:
+      - claude/github-connection-setup-DK5nr
+      - main
+    paths:
+      - 'backend/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy to Railway
+        working-directory: backend
+        run: railway up --detach
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: c34e3279-4943-4999-97a5-549c146e56dc
+          RAILWAY_SERVICE_ID: af6ff475-c8a9-4b57-aa83-e2835fc11a79

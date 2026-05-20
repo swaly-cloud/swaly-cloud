@@ -82,10 +82,14 @@ export default function VirtualTryOn({ products = [] }) {
   const [photoBlob, setPhotoBlob] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [analysis, setAnalysis] = useState(null);
+  const [generatedImage, setGeneratedImage] = useState(null);
+  const [recommendations, setRecommendations] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [recommending, setRecommending] = useState(false);
   const [err, setErr] = useState('');
   const [cameraOn, setCameraOn] = useState(false);
-  const [step, setStep] = useState('pick'); // pick | camera | product | result
+  const [step, setStep] = useState('pick');
   const [productPage, setProductPage] = useState(0);
   const [productsLoaded, setProductsLoaded] = useState(false);
   const videoRef = useRef(null);
@@ -149,76 +153,84 @@ export default function VirtualTryOn({ products = [] }) {
     reader.readAsDataURL(file);
   }, []);
 
-  // Analyze with Claude
+  const API = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+  const authHeaders = () => ({
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${localStorage.getItem('azzabi_admin_token')}`,
+  });
+
+  // Step 1: Analyze face with Claude
   const analyze = useCallback(async () => {
     if (!photo || !selectedProduct) return;
-    setLoading(true); setErr(''); setAnalysis(null);
+    setLoading(true); setErr(''); setAnalysis(null); setGeneratedImage(null); setRecommendations(null);
     try {
       const base64 = photo.split(',')[1];
       const mime = photo.split(';')[0].split(':')[1];
-      const { analysis: res } = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/tryon/analyze`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('azzabi_admin_token')}`,
-          },
-          body: JSON.stringify({ photoBase64: base64, photoMimeType: mime, product: selectedProduct }),
-        }
-      ).then(r => r.ok ? r.json() : r.json().then(e => { throw new Error(e.error); }));
+      const { analysis: res } = await fetch(`${API}/tryon/analyze`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ photoBase64: base64, photoMimeType: mime, product: selectedProduct }),
+      }).then(r => r.ok ? r.json() : r.json().then(e => { throw new Error(e.error); }));
 
-      // Generate image with OpenAI
-      console.log('🎨 Calling image generate endpoint...');
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 120000); // 2 min timeout
-      let genRes;
-      try {
-        genRes = await fetch(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/tryon/generate`,
-          {
-            method: 'POST',
-            signal: controller.signal,
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('azzabi_admin_token')}`,
-            },
-            body: JSON.stringify({
-              photoBase64: base64,
-              photoMimeType: mime,
-              productImageUrl: selectedProduct?.img,
-              product: selectedProduct,
-              analysis: res,
-            }),
-          }
-        );
-      } finally {
-        clearTimeout(timeout);
-      }
-
-      if (!genRes.ok) {
-        const errData = await genRes.json().catch(() => ({ error: `HTTP ${genRes.status}` }));
-        console.error('🚨 Generate Error:', errData);
-        throw new Error(errData.error || `HTTP ${genRes.status}`);
-      }
-
-      const genData = await genRes.json();
-      console.log('✅ Generate response keys:', Object.keys(genData));
-      const { imageUrl } = genData;
-      if (!imageUrl) throw new Error('Aucune image retournée par le serveur');
-      console.log('✅ Image generated, length:', imageUrl?.length);
-
-      setAnalysis({ ...res, generatedImageUrl: imageUrl });
+      setAnalysis(res);
       setStep('result');
+
+      // Fetch recommendations in background
+      fetchRecommendations(res.faceShape);
     } catch (e) {
-      setErr(e.message || 'Erreur lors de l\'analyse');
+      setErr(e.message || "Erreur lors de l'analyse");
     } finally {
       setLoading(false);
     }
   }, [photo, selectedProduct]);
 
+  // Step 2a: Get frame recommendations for this face shape
+  const fetchRecommendations = useCallback(async (faceShape) => {
+    const eyewear = products.filter(p => !p.cat?.toLowerCase().includes('lentille'));
+    if (!faceShape || !eyewear.length) return;
+    setRecommending(true);
+    try {
+      const { recommendations: recs } = await fetch(`${API}/tryon/recommend`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ faceShape, products: eyewear }),
+      }).then(r => r.ok ? r.json() : r.json().then(e => { throw new Error(e.error); }));
+      setRecommendations(recs);
+    } catch (e) {
+      console.warn('Recommandations non disponibles:', e.message);
+    } finally {
+      setRecommending(false);
+    }
+  }, [products]);
 
-  const reset = () => { setPhoto(null); setPhotoBlob(null); setSelectedProduct(null); setAnalysis(null); setErr(''); setStep('pick'); stopCamera(); };
+  // Step 2b: Generate realistic AI photo (optional)
+  const generateImage = useCallback(async () => {
+    if (!photo || !selectedProduct || !analysis) return;
+    setGenerating(true); setErr('');
+    try {
+      const base64 = photo.split(',')[1];
+      const mime = photo.split(';')[0].split(':')[1];
+      const { imageUrl } = await fetch(`${API}/tryon/generate`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({
+          photoBase64: base64, photoMimeType: mime,
+          product: selectedProduct, analysis,
+        }),
+      }).then(r => r.ok ? r.json() : r.json().then(e => { throw new Error(e.error); }));
+      setGeneratedImage(imageUrl);
+    } catch (e) {
+      setErr(e.message || 'Erreur lors de la génération');
+    } finally {
+      setGenerating(false);
+    }
+  }, [photo, selectedProduct, analysis]);
+
+  const reset = () => {
+    setPhoto(null); setPhotoBlob(null); setSelectedProduct(null);
+    setAnalysis(null); setGeneratedImage(null); setRecommendations(null);
+    setErr(''); setStep('pick'); stopCamera();
+  };
 
   if (!authed) return <LoginGate onAuth={() => setAuthed(true)} />;
 
@@ -355,7 +367,7 @@ export default function VirtualTryOn({ products = [] }) {
             {err && <div style={{ padding: '9px 12px', borderRadius: 8, background: C.eb, border: `1px solid ${C.ee}`, fontSize: 12, color: C.er, marginBottom: 10 }}>{err}</div>}
 
             <button onClick={analyze} disabled={!selectedProduct || loading} style={{ width: '100%', padding: '13px', borderRadius: 10, border: 'none', background: selectedProduct ? C.goldGrad : C.bd, color: selectedProduct ? '#0a0a0f' : C.mu, fontSize: 14, fontWeight: 700, cursor: selectedProduct ? 'pointer' : 'not-allowed', fontFamily: S, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all .15s' }}>
-              <Sparkles size={16} />{loading ? 'Génération en cours… (1-2 min)' : 'Analyser avec Claude'}
+              <Sparkles size={16} />{loading ? 'Analyse en cours…' : 'Analyser avec Claude'}
             </button>
           </div>
         )}
@@ -363,15 +375,16 @@ export default function VirtualTryOn({ products = [] }) {
         {/* ── STEP: RESULT ── */}
         {step === 'result' && analysis && (
           <div style={{ display: 'grid', gap: 12 }}>
-            {/* DALL-E Generated Image */}
-            <div style={{ borderRadius: 14, overflow: 'hidden', border: `1px solid ${C.bd}`, position: 'relative' }}>
-              <img src={analysis.generatedImageUrl} alt="Try-on DALL-E" style={{ width: '100%', display: 'block' }} />
-              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '8px 12px', background: 'linear-gradient(transparent,rgba(0,0,0,.5))', fontSize: 9, color: '#888' }}>
-                Généré par DALL-E 3 ✨
-              </div>
+
+            {/* Photo originale + image générée */}
+            <div style={{ borderRadius: 14, overflow: 'hidden', border: `1px solid ${C.bd}`, background: C.cd }}>
+              <img src={generatedImage || photo} alt="essayage" style={{ width: '100%', display: 'block' }} />
+              {generatedImage && (
+                <div style={{ padding: '6px 12px', fontSize: 9, color: C.mu, textAlign: 'center' }}>Image IA générée ✨</div>
+              )}
             </div>
 
-            {/* Score + face shape */}
+            {/* Score + forme visage */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               <div style={{ padding: '12px 14px', borderRadius: 10, background: C.cd, border: `1px solid ${C.bd}` }}>
                 <div style={{ fontSize: 10, color: C.mu, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 6 }}>Compatibilité</div>
@@ -383,7 +396,7 @@ export default function VirtualTryOn({ products = [] }) {
               </div>
             </div>
 
-            {/* Selected product */}
+            {/* Monture sélectionnée */}
             {selectedProduct && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 10, background: C.cd, border: `1px solid ${C.bd}` }}>
                 <div style={{ width: 56, height: 40, borderRadius: 7, overflow: 'hidden', background: C.sf, flexShrink: 0 }}>
@@ -396,7 +409,7 @@ export default function VirtualTryOn({ products = [] }) {
               </div>
             )}
 
-            {/* Claude recommendation */}
+            {/* Analyse Claude */}
             <div style={{ padding: '14px', borderRadius: 10, background: C.as, border: `1px solid rgba(201,162,39,.2)` }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
                 <Sparkles size={13} color={C.ac} />
@@ -405,6 +418,52 @@ export default function VirtualTryOn({ products = [] }) {
               <p style={{ margin: '0 0 8px', fontSize: 12, color: C.tx, lineHeight: 1.6 }}>{analysis.recommendation}</p>
               {analysis.tips && <p style={{ margin: 0, fontSize: 11, color: C.mu, lineHeight: 1.5, fontStyle: 'italic' }}>💡 {analysis.tips}</p>}
             </div>
+
+            {/* ── TOP RECOMMANDATIONS ── */}
+            <div style={{ padding: '14px', borderRadius: 10, background: C.cd, border: `1px solid ${C.bd}` }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
+                <Sparkles size={13} color={C.ac} />
+                <span style={{ fontSize: 10, fontWeight: 700, color: C.ac, textTransform: 'uppercase', letterSpacing: '.06em' }}>
+                  Meilleures montures pour votre visage
+                </span>
+              </div>
+              {recommending ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.mu, fontSize: 12 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: C.ac, animation: 'bounce 1.4s infinite' }} />
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: C.ac, animation: 'bounce 1.4s infinite', animationDelay: '.2s' }} />
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: C.ac, animation: 'bounce 1.4s infinite', animationDelay: '.4s' }} />
+                  <style>{`@keyframes bounce{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}`}</style>
+                  <span style={{ marginLeft: 4 }}>IA en train de chercher…</span>
+                </div>
+              ) : recommendations?.length > 0 ? (
+                <div style={{ display: 'grid', gap: 8 }}>
+                  {recommendations.map((rec, i) => (
+                    <button key={i} onClick={() => { setSelectedProduct(rec.product); setGeneratedImage(null); }} style={{ padding: '10px 12px', borderRadius: 8, border: `1.5px solid ${selectedProduct?.id === rec.product?.id ? C.ac : C.bd}`, background: selectedProduct?.id === rec.product?.id ? C.as : 'transparent', cursor: 'pointer', textAlign: 'left', transition: 'all .15s' }}>
+                      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: C.ac, minWidth: 20 }}>#{i + 1}</div>
+                        {rec.product?.img && <img src={rec.product.img} alt={rec.product.name} style={{ width: 44, height: 30, objectFit: 'cover', borderRadius: 5, flexShrink: 0 }} />}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 9, color: C.mu, fontWeight: 600, textTransform: 'uppercase' }}>{rec.product?.brand}</div>
+                          <div style={{ fontSize: 12, color: C.tx, fontWeight: 700 }}>{rec.product?.name}</div>
+                          <div style={{ fontSize: 10, color: C.ac, fontStyle: 'italic', marginTop: 2 }}>→ {rec.reason}</div>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p style={{ margin: 0, fontSize: 11, color: C.mu }}>Aucune recommandation disponible.</p>
+              )}
+            </div>
+
+            {/* Bouton générer image IA */}
+            {!generatedImage && (
+              <button onClick={generateImage} disabled={generating} style={{ width: '100%', padding: '13px', borderRadius: 10, border: 'none', background: C.goldGrad, color: '#0a0a0f', fontSize: 14, fontWeight: 700, cursor: generating ? 'not-allowed' : 'pointer', fontFamily: S, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: generating ? 0.7 : 1 }}>
+                <Sparkles size={16} />{generating ? 'Génération en cours… (1-2 min)' : 'Générer image réaliste IA'}
+              </button>
+            )}
+
+            {err && <div style={{ padding: '9px 12px', borderRadius: 8, background: C.eb, border: `1px solid ${C.ee}`, fontSize: 12, color: C.er }}>{err}</div>}
 
             <button onClick={reset} style={{ width: '100%', padding: '12px', borderRadius: 10, border: `1px solid ${C.bd}`, background: 'transparent', color: C.mu, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: S }}>
               Nouvel essayage

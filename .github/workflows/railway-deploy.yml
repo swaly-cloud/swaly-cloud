@@ -1,0 +1,24 @@
+name: Deploy Backend to Railway
+
+on:
+  push:
+    branches:
+      - claude/github-connection-setup-DK5nr
+      - main
+    paths:
+      - 'backend/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Trigger Railway redeploy via API
+        run: |
+          curl -f -X POST https://backboard.railway.app/graphql/v2 \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "query": "mutation { serviceInstanceRedeploy(environmentId: \"93068331-7ac1-4dbc-883b-5e65ab1a30ca\", serviceId: \"af6ff475-c8a9-4b57-aa83-e2835fc11a79\") }"
+            }'

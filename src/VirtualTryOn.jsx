@@ -174,12 +174,38 @@ export default function VirtualTryOn({ products = [] }) {
 
       setAnalysis(res);
       setStep('result');
+      setLoading(false);
+
+      // Generate image automatically after analysis
+      console.log('🎨 Starting automatic image generation...');
+      setGenerating(true);
+      try {
+        console.log('📤 Sending generate request with analysis:', res);
+        const response = await fetch(`${API}/tryon/generate`, {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify({
+            photoBase64: base64, photoMimeType: mime,
+            product: selectedProduct, analysis: res,
+          }),
+        });
+        console.log('📨 Generate response status:', response.status);
+        const data = await response.json();
+        console.log('📦 Generate response data:', data);
+        if (!response.ok) throw new Error(data.error);
+        setGeneratedImage(data.imageUrl);
+        console.log('✅ Image generated successfully');
+      } catch (e) {
+        console.error('❌ Génération automatique échouée:', e.message);
+        setErr('Erreur: ' + e.message);
+      } finally {
+        setGenerating(false);
+      }
 
       // Fetch recommendations in background
       fetchRecommendations(res.faceShape);
     } catch (e) {
       setErr(e.message || "Erreur lors de l'analyse");
-    } finally {
       setLoading(false);
     }
   }, [photo, selectedProduct]);

@@ -1,62 +1,81 @@
 const express = require('express');
+const zlib = require('zlib');
+const { promisify } = require('util');
 const Anthropic = require('@anthropic-ai/sdk');
 const { OpenAI } = require('openai');
-const sharp = require('sharp');
 const { authMiddleware } = require('../middleware/auth');
+
+const deflate = promisify(zlib.deflate);
 
 const router = express.Router();
 
 router.use(authMiddleware);
 
-// Create PNG transparency mask for images.edit()
-// Transparent areas (alpha=0) = editable (eyes), Opaque areas (alpha=255) = preserved (face)
+// Pure Node.js CRC32 for PNG chunks
+function crc32(buf) {
+  if (!crc32.table) {
+    crc32.table = new Uint32Array(256);
+    for (let i = 0; i < 256; i++) {
+      let c = i;
+      for (let j = 0; j < 8; j++) c = (c & 1) ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+      crc32.table[i] = c;
+    }
+  }
+  let crc = 0xffffffff;
+  for (let i = 0; i < buf.length; i++) crc = crc32.table[(crc ^ buf[i]) & 0xff] ^ (crc >>> 8);
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function pngChunk(type, data) {
+  const typeBytes = Buffer.from(type);
+  const len = Buffer.allocUnsafe(4);
+  len.writeUInt32BE(data.length);
+  const crcVal = Buffer.allocUnsafe(4);
+  crcVal.writeUInt32BE(crc32(Buffer.concat([typeBytes, data])));
+  return Buffer.concat([len, typeBytes, data, crcVal]);
+}
+
+// Create PNG transparency mask using pure Node.js (no native deps)
+// Transparent areas (alpha=0) = editable (eyes), Opaque (alpha=255) = preserved (face)
 async function createEyeMask(leftEye, rightEye) {
   const size = 1024;
-  const eyeRadius = 120; // pixels, controls editable region size around each eye
+  const eyeRadius = 120;
 
-  // Create RGBA buffer: white background with transparent eye circles
-  const buffer = Buffer.alloc(size * size * 4);
-
-  // Convert normalized coordinates (0-1) to pixel coordinates
   const leftEyeX = Math.round(leftEye.x * size);
   const leftEyeY = Math.round(leftEye.y * size);
   const rightEyeX = Math.round(rightEye.x * size);
   const rightEyeY = Math.round(rightEye.y * size);
 
-  // Fill buffer: white opaque for face, transparent for eye regions
+  // Build scanlines: 1 filter byte (0=None) + 4 bytes RGBA per pixel
+  const rows = [];
   for (let y = 0; y < size; y++) {
+    const row = Buffer.allocUnsafe(1 + size * 4);
+    row[0] = 0; // filter: None
     for (let x = 0; x < size; x++) {
-      const idx = (y * size + x) * 4;
-
-      // Check if pixel is in eye circle regions
-      const distToLeftEye = Math.hypot(x - leftEyeX, y - leftEyeY);
-      const distToRightEye = Math.hypot(x - rightEyeX, y - rightEyeY);
-      const inEyeRegion = distToLeftEye <= eyeRadius || distToRightEye <= eyeRadius;
-
-      if (inEyeRegion) {
-        // Transparent (editable) - for eye regions
-        buffer[idx] = 255;
-        buffer[idx + 1] = 255;
-        buffer[idx + 2] = 255;
-        buffer[idx + 3] = 0; // alpha = 0 (transparent)
-      } else {
-        // Opaque (preserve) - for face regions
-        buffer[idx] = 255;
-        buffer[idx + 1] = 255;
-        buffer[idx + 2] = 255;
-        buffer[idx + 3] = 255; // alpha = 255 (opaque)
-      }
+      const i = 1 + x * 4;
+      const inEye = Math.hypot(x - leftEyeX, y - leftEyeY) <= eyeRadius ||
+                    Math.hypot(x - rightEyeX, y - rightEyeY) <= eyeRadius;
+      row[i] = 255; row[i + 1] = 255; row[i + 2] = 255;
+      row[i + 3] = inEye ? 0 : 255; // 0=transparent(editable), 255=opaque(preserved)
     }
+    rows.push(row);
   }
 
-  // Create PNG from raw RGBA buffer
-  const maskPng = await sharp(buffer, {
-    raw: { width: size, height: size, channels: 4 },
-  })
-    .png()
-    .toBuffer();
+  const compressed = await deflate(Buffer.concat(rows));
 
-  return maskPng;
+  const ihdr = Buffer.allocUnsafe(13);
+  ihdr.writeUInt32BE(size, 0);
+  ihdr.writeUInt32BE(size, 4);
+  ihdr[8] = 8;  // bit depth
+  ihdr[9] = 6;  // RGBA
+  ihdr[10] = 0; ihdr[11] = 0; ihdr[12] = 0;
+
+  return Buffer.concat([
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), // PNG signature
+    pngChunk('IHDR', ihdr),
+    pngChunk('IDAT', compressed),
+    pngChunk('IEND', Buffer.alloc(0)),
+  ]);
 }
 
 router.post('/analyze', async (req, res) => {

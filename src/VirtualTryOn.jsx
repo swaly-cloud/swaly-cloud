@@ -177,19 +177,27 @@ export default function VirtualTryOn({ products = [] }) {
       setLoading(false);
 
       // Generate image automatically after analysis
+      console.log('🎨 Starting automatic image generation...');
       setGenerating(true);
       try {
-        const { imageUrl } = await fetch(`${API}/tryon/generate`, {
+        console.log('📤 Sending generate request with analysis:', res);
+        const response = await fetch(`${API}/tryon/generate`, {
           method: 'POST',
           headers: authHeaders(),
           body: JSON.stringify({
             photoBase64: base64, photoMimeType: mime,
             product: selectedProduct, analysis: res,
           }),
-        }).then(r => r.ok ? r.json() : r.json().then(e => { throw new Error(e.error); }));
-        setGeneratedImage(imageUrl);
+        });
+        console.log('📨 Generate response status:', response.status);
+        const data = await response.json();
+        console.log('📦 Generate response data:', data);
+        if (!response.ok) throw new Error(data.error);
+        setGeneratedImage(data.imageUrl);
+        console.log('✅ Image generated successfully');
       } catch (e) {
-        console.warn('Génération automatique échouée:', e.message);
+        console.error('❌ Génération automatique échouée:', e.message);
+        setErr('Erreur: ' + e.message);
       } finally {
         setGenerating(false);
       }

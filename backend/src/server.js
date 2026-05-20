@@ -14,7 +14,7 @@ const PORT = process.env.PORT || 3001;
 app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));
 app.use(express.json({ limit: '20mb' }));
 
-app.get('/api/health', (_req, res) => res.json({ status: 'ok', service: 'azzabi-optic-api' }));
+app.get('/api/health', (_req, res) => res.json({ status: 'ok', service: 'azzabi-optic-api', version: '2.1.0' }));
 
 app.use('/api/auth',         authRouter);
 app.use('/api/admin',        adminRouter);
